@@ -65,7 +65,7 @@ if args.case_path is not None:
     # if this is given
     # example: first step of importance sampling -> new simulations can be stored in a subfolder for the experiment
     for directory in [dir_archive, dir_scripts, dir_run]:
-        if os.path.isdir(f"{directory}/{args.case_path}" == False):
+        if os.path.isdir(f"{directory}/{args.case_path}") == False:
             os.system(f"mkdir -p {directory}/{args.case_path}")
 else:
     # if not specified -> store the new run in the origin directory
@@ -153,7 +153,7 @@ run(f"./xmlchange GET_REFCASE=FALSE")
 ############################
 
 for component in ['cam', 'cice', 'cism', 'clm', 'cpl', 'mosart', 'pop', 'ww']:
-    run(f'cp ~/projects/cesm215_peters_scripts/cesm215_user_nl/{args.output}/user_nl_{component} ./user_nl_{component}')
+    run(f'cp {dir_user_nl}/{args.output}/user_nl_{component} ./user_nl_{component}')
 
 # # --- link postrun script ---
 # # if [ $OUTPUT = default ]; then
@@ -208,9 +208,9 @@ os.chdir(f"{dir_run}/{args.case_path}/{args.case_identifier}/run")
 cam_file=glob.glob("*cam.r.*")[0]
 
 if args.perturbation_seed == 0:
-    print("********************************")
-    print("* Member 0 - NO MODIFICATION ! *")
-    print("********************************")
+    print("*********************")
+    print("* NO Perturbation ! *")
+    print("*********************")
 else:
     #module purge
     run(f"module load cdo nco python3/2022.01-gcc-11.2.0")

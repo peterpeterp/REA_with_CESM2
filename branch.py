@@ -143,7 +143,7 @@ run(f"./xmlchange GET_REFCASE=FALSE")
 ############################
 
 for component in ['cam', 'cice', 'cism', 'clm', 'cpl', 'mosart', 'pop', 'ww']:
-    run(f'cp ~/projects/cesm215_peters_scripts/cesm215_user_nl/{args.output}/user_nl_{component} ./user_nl_{component}')
+    run(f'cp {dir_user_nl}/{args.output}/user_nl_{component} ./user_nl_{component}')
 
 ##############
 # setup case #
