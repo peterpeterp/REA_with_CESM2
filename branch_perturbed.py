@@ -38,9 +38,10 @@ parser.add_argument("--perturbation_seed", type=int)
 parser.add_argument("--perturbation_order_of_magnitude", type=float, default=-13)
 parser.add_argument("--store_perturbation_file", action='store_true')
 
+# directory where the user_nl files are found
+parser.add_argument("--user_nl_file_directory", type=str, default="default")
 
-# parser.add_argument("--JOB_WALLCLOCK_TIME", type=str, default='12:00:00')
-parser.add_argument("--output", type=str, default="default")
+
 parser.add_argument("--verbose", action='store_true')
 parser.add_argument("--overwrite", action='store_true')
 args = parser.parse_args()
@@ -153,7 +154,7 @@ run(f"./xmlchange GET_REFCASE=FALSE")
 ############################
 
 for component in ['cam', 'cice', 'cism', 'clm', 'cpl', 'mosart', 'pop', 'ww']:
-    run(f'cp {dir_user_nl}/{args.output}/user_nl_{component} ./user_nl_{component}')
+    run(f'cp {args.user_nl_file_directory}/user_nl_{component} ./user_nl_{component}')
 
 # # --- link postrun script ---
 # # if [ $OUTPUT = default ]; then
