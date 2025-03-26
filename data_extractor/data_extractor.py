@@ -9,14 +9,17 @@ from ensembles.ensemble_GKLT import ensemble_GKLT
 
 realm_dict = {
     'atm' : 'atmos',
+    'lnd' : 'land',
 }
 
 variable_dict = {
     'TREFHT' : 'tas',
+    'U200' : 'ua200',
     'U500' : 'ua500',
     'V500' : 'va500',
     'Z500' : 'zg500',
     'SST' : 'tos',
+    'SOILWATER_10CM' : 'mrsos',
 }
 
 def extract_rea(
