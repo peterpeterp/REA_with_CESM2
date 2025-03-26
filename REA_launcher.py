@@ -150,12 +150,8 @@ class launch_handler():
         # extract observables
         for i in evaluation_table.index:
             _archive = f"{self._exp.dir_archive}/{previous_todos.iloc[i].loc['case_path']}/{previous_todos.iloc[i].loc['case_identifier']}"
-            h1_files = glob.glob(f"{_archive}/atm/hist/*h1*")
-            assert len(h1_files) > 0, "h1-file missing"
-            assert len(h1_files) == 1, "multiple h1-files available"
-            with xr.open_dataset(h1_files[0]) as nc:
-                obs = self._exp.get_main_observable(nc)
-            evaluation_table.loc[i,'observable mean'] = float(obs.mean('time'))
+            obs = self._exp.get_main_observable(_archive)
+            evaluation_table.loc[i,'observable mean'] = obs
             # calculate scores
             evaluation_table.loc[i, 'score'] = self._exp.calc_score(obs)
         # calculate weights
