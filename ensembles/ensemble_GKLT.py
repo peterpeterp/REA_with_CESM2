@@ -55,9 +55,9 @@ class ensemble_GKLT(ensemble):
     # build a forest                  #
     ###################################
 
-    def get_sim_names(self):
+    def get_sim_names(self, overwrite=False):
         file_name = f"{self._exp.dir_out}/sim_names.txt"
-        if os.path.isfile(file_name) == False:
+        if os.path.isfile(file_name) == False or overwrite:
             self._sim_names = []
             for step in range(self._exp.n_steps):
                 sim_paths = sorted([p for p in glob.glob(f"{self._exp.dir_archive_post}/*/{'/*'*step}/atm")])
