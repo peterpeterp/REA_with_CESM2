@@ -165,4 +165,4 @@ def extract_initial(
                     ds.to_netcdf(out_file_name)
             except:
                 print('fail')
-                asdasd
+
