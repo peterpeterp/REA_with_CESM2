@@ -1,0 +1,7 @@
+
+
+empty_htapes = .true.
+
+nhtfrq = 0, -24, -24, -24, -24, -24, -24, -24, -24, -24
+mfilt = 1, 365, 365, 365, 365, 365, 365, 365, 365, 365
+fincl2 = 'PRECC', 'PRECL', 'PSL', 'TREFHT', 'TREFHTMN', 'TREFHTMX', 'RHREFHT', 'QREFHT', 'PS', 'Z500', 'SST', 'ICEFRAC'

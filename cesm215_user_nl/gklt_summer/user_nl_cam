@@ -1,0 +1,8 @@
+
+
+empty_htapes = .true.
+
+nhtfrq = 0, -24, -24, -24, -24, -24, -24, -24, -24, -24
+mfilt = 1, 365, 365, 365, 365, 365, 365, 365, 365, 365
+fincl2 = 'PRECC', 'PRECL', 'PSL', 'TREFHT', 'TREFHTMN', 'TREFHTMX', 'RHREFHT', 'QREFHT', 'PS', 'Z200', 'Z500', 'U200', 'U500', 'V200', 'V500', 'SST', 'ICEFRAC'
+fincl3 = 'SHFLX', 'LHFLX', 'FSDS', 'FSNS', 'FLDS', 'FLNS'

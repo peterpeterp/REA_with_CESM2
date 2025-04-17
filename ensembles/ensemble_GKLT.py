@@ -78,7 +78,7 @@ class ensemble_GKLT(ensemble):
         for sim_name in self._forest.keys():
             self._forest[sim_name]._data[var_name] = xr.open_dataset(f"{self._exp.dir_archive_post}/{sim_name}/post/{var_name}.nc")[var_name]         
 
-    def print_tree(self, initial_name, show_uncomplete=False):
+    def print_tree(self, initial_name, show_uncomplete=False, print_weight=False):
         class bcolors:
             HEADER = '\033[95m'
             OKBLUE = '\033[94m'
@@ -102,10 +102,11 @@ class ensemble_GKLT(ensemble):
                 l += [f'{p.name}']
                 step += 1
             s = '/'.join(l[::-1])
-            if step == 18:
-                w = f"  -> {float(self._weight.loc[s]):.2f}"
-            else:
-                w = ''
+            w = ''
+            if print_weight:
+                if step == self._exp.n_steps:
+                    w = f"  -> {float(self._weight.loc[s]):.2f}"
+
             if sum([s in '/'.join(sims[i,:step]) for i in range(sims.shape[0])]) > 0:
                 print(bcolors.WARNING + f"{pre}{node.name}{w}" + bcolors.ENDC)
             else:
@@ -179,7 +180,7 @@ class ensemble_GKLT(ensemble):
     # plotting #
     ############
 
-    def explore_initial_condition(self, initial_condition_name, var_name, ax=None):
+    def explore_initial_condition(self, initial_condition_name, var_name, ax=None, max_length=90):
         dead_ends = []
         for k,v in self._forest.items():
             if v.full_name.split('/')[0] == initial_condition_name:
@@ -197,9 +198,11 @@ class ensemble_GKLT(ensemble):
             while sim.parent is not None:
                 sim = sim.parent
                 x = xr.concat((sim._data[var_name], x), dim='time')
-            if len(x) == 90:
+            if len(x) == max_length:
                 linestyle = '-'
+                color = 'r'
             else:
-                linestyle = ':'
-                
-            ax.plot(x, color=self._color, linestyle=linestyle) 
+                linestyle = '-'
+                color='gray'
+
+            ax.plot(x, color=color, linestyle=linestyle, linewidth=0.5) 

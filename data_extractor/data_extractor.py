@@ -18,8 +18,11 @@ variable_dict = {
     'U500' : 'ua500',
     'V500' : 'va500',
     'Z500' : 'zg500',
+    'PSL' : 'psl',
     'SST' : 'tos',
     'SOILWATER_10CM' : 'mrsos',
+    'NEP' : 'nep',
+    'pr' : 'pr',
 }
 
 def extract_rea(
@@ -27,6 +30,7 @@ def extract_rea(
     variable = 'Z500',
     realm = 'atm',
     h_identifier = 'h1',
+    time_frequency = 'day',
     preprocessing_module = None,
     overwrite = False,
 ):
@@ -48,7 +52,7 @@ def extract_rea(
         "institute": 'NCAR',
         "model": 'CESM2',
         "experiment": f"{exp.initial_conditions_name}-x{exp.experiment_identifier[1]}",
-        "time_frequency": "day",
+        "time_frequency": time_frequency,
         "realm": realm_dict[realm],
         "variable": variable_dict[variable]+name_addition,
     }
@@ -61,8 +65,9 @@ def extract_rea(
     for i,sim_name in enumerate(trajectory_names):
         ens_name = f"ens{str(i+1).zfill(3)}"
         out_dir = '/'.join([exp.dir_work] + [v for k,v in naming_d.items()] + [ens_name])
+
     
-        out_file_name = f"{out_dir}/{variable_dict[variable]+name_addition}_day_CESM2_{naming_d['experiment']}_{ens_name}_{exp.initial_condition_fake_year}.nc"
+        out_file_name = f"{out_dir}/{variable_dict[variable]+name_addition}_{time_frequency}_CESM2_{naming_d['experiment']}_{ens_name}_{exp.initial_condition_fake_year}.nc"
         print(out_file_name)
         if os.path.isfile(out_file_name) == False or overwrite:
             todos = [['/'.join(sim_name.split('/')[:step])] for step in range(1,exp.n_steps+1)]
@@ -74,10 +79,13 @@ def extract_rea(
                     with xr.open_mfdataset(h_file, preprocess=preprocessor) as nc:
                         l.append(nc[variable])
                 except:
+                    #print(f'fail {h_file}')
                     pass
             if len(l) == exp.n_steps:
                 x = xr.merge(l)[variable].sortby('time')
-                x = x.assign_coords(time=xr.date_range(f"{exp.initial_condition_fake_year}-{exp.start_date_in_year}", periods=91)[1:])
+                x = x.assign_coords(time=xr.date_range(f"{exp.initial_condition_fake_year}-{exp.start_date_in_year}", periods=exp.n_days*exp.n_steps + 1)[1:])
+                if time_frequency == 'mon':
+                    x = x.resample(time='ME').mean()
                 x = x.assign_coords(sim=sim_name)
                 ds = xr.Dataset({variable_dict[variable]:x})
                 ds.attrs = nc.attrs
@@ -91,6 +99,8 @@ def extract_rea(
 
                 os.makedirs(out_dir, exist_ok=True)
                 ds.to_netcdf(out_file_name)
+            #else:
+            #    print('fail', l)
 
 
 def extract_initial(
@@ -98,6 +108,7 @@ def extract_initial(
     variable = 'Z500',
     realm = 'atm',
     h_identifier = 'h1',
+    time_frequency = 'day',
     preprocessing_module = None,
     overwrite = False,
 ):
@@ -117,7 +128,7 @@ def extract_initial(
         "institute": 'NCAR',
         "model": 'CESM2',
         "experiment": f"{exp.initial_conditions_name}-initial",
-        "time_frequency": "day",
+        "time_frequency": time_frequency,
         "realm": realm_dict[realm],
         "variable": variable_dict[variable]+name_addition,
     }
@@ -129,7 +140,7 @@ def extract_initial(
         ens_name = f"ens{str(i+1).zfill(3)}"
         out_dir = '/'.join([exp.dir_work] + [v for k,v in naming_d.items()] + [ens_name])
         case_identifier = initial_condition.split('.')[-4] + '_' + initial_condition.split('/')[-1].split('-')[0]
-        out_file_name = f"{out_dir}/{variable_dict[variable]+name_addition}_day_CESM2_{naming_d['experiment']}_{ens_name}_{exp.initial_condition_fake_year}.nc"
+        out_file_name = f"{out_dir}/{variable_dict[variable]+name_addition}_{time_frequency}_CESM2_{naming_d['experiment']}_{ens_name}_{exp.initial_condition_fake_year}.nc"
         if os.path.isfile(out_file_name) == False or overwrite:
             archive_fldr = f"{exp.dir_archive}/GKLT/initial_{exp.initial_conditions_name}/{case_identifier}"
             h_files = glob.glob(f"{archive_fldr}/{realm}/hist/*{h_identifier}*.nc")
@@ -138,7 +149,9 @@ def extract_initial(
                 with xr.open_mfdataset(h_files, preprocess=preprocessor) as nc:
                     x = nc[variable]
                     initial_condition_year = x.time.dt.year.values[0]
-                    x = x.assign_coords(time=xr.date_range(f"{exp.initial_condition_fake_year}-{exp.start_date_in_year}", periods=91)[1:])
+                    x = x.assign_coords(time=xr.date_range(f"{exp.initial_condition_fake_year}-{exp.start_date_in_year}", periods=exp.n_days*exp.n_steps + 1)[1:])
+                    if time_frequency == 'mon':
+                        x = x.resample(time='ME').mean()
                     x = x.assign_coords(sim=case_identifier)
                     ds = xr.Dataset({variable_dict[variable]:x})
                     ds.attrs = nc.attrs
@@ -151,4 +164,5 @@ def extract_initial(
                     os.makedirs(out_dir, exist_ok=True)
                     ds.to_netcdf(out_file_name)
             except:
-                pass
+                print('fail')
+                asdasd

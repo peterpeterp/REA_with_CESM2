@@ -1,0 +1,17 @@
+
+
+!----------------------------------------------------------------------------------
+! Settings from cmip6_glaciers_virtual_antarctica
+!----------------------------------------------------------------------------------
+
+! This differs from the default in that it turns on virtual columns over Antarctica
+! This is desired so that we have the output needed to drive a later offline CISM Antarctica simulation
+! However, this increases the cost of CLM by about 10%
+glacier_region_behavior = 'single_at_atm_topo', 'virtual', 'virtual', 'virtual'
+
+use_init_interp = .true.
+hist_empty_htapes = .true.
+hist_fincl8 = 'GPP', 'NBP', 'TLAI', 'FAREA_BURNED',  'QFLX_EVAP_TOT', 'QVEGT', 'SOILWATER_10CM', 'TSOI_10CM', 'QRUNOFF',
+ 'TOTSOILLIQ', 'EFLX_LH_TOT', 'FSH', 'RH2M', 'RH2M_U', 'U10', 'PBOT', 'FSNO', 'EFLX_GNET', 'H2OSOI'
+hist_nhtfrq = 0,-24
+hist_mfilt = 1,5
