@@ -5,7 +5,7 @@ import numpy as np
 sys.path.append('../')
 
 from ensembles.ensemble_GKLT import ensemble_GKLT
-from data_extractor import extract_rea,extract_initial
+from data_extractor import extract
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -15,6 +15,7 @@ parser.add_argument("--realm", type=str)
 parser.add_argument("--h_identifier", type=str)
 parser.add_argument("--time_frequency", type=str, default='day')
 parser.add_argument("--preprocessing", type=str, default='')
+parser.add_argument("--experiment_identifiers", nargs='+', default=[f"c{i}" for i in range(1,6)] + [f"p{i}" for i in range(1,6)] + ['c1_initial', 'p1_initial'])
 parser.add_argument("--overwrite", action='store_true')
 command_line_arguments = parser.parse_args()
 
@@ -29,12 +30,16 @@ if preprocessing == '':
 else:
     preprocessing_module = importlib.import_module(f"data_extraction.preprocessing.{preprocessing}")
 
-for experiment_identifier in [f"c{i}" for i in range(1,6)] + [f"p{i}" for i in range(1,6)]:
+for experiment_identifier in experiment_identifiers:
     print(experiment_identifier)
     # load experiment configuration settings
-    exp = experiment(importlib.import_module(f"experiment_configuration.{experiment_identifier}").config)
+    if 'initial' in experiment_identifier:
+        exp = experiment(importlib.import_module(f"experiment_configuration.{experiment_identifier.replace('_initial','')}").config)
+    else:
+        exp = experiment(importlib.import_module(f"experiment_configuration.{experiment_identifier}").config)
 
-    extract_rea(
+    extract(
+        experiment_identifier, 
         exp,
         variable = variable,
         realm = realm,
@@ -43,15 +48,3 @@ for experiment_identifier in [f"c{i}" for i in range(1,6)] + [f"p{i}" for i in r
         preprocessing_module = preprocessing_module,
         overwrite = overwrite,
     )
-
-    if '1' in experiment_identifier:
-        extract_initial(
-            exp,
-            variable = variable,
-            realm = realm,
-            h_identifier = h_identifier,
-            time_frequency = time_frequency,
-            preprocessing_module = preprocessing_module,
-            overwrite = overwrite,
-        )
-    
