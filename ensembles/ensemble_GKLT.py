@@ -144,10 +144,12 @@ class ensemble_GKLT(ensemble):
     # First analysis #
     ##################
 
-    def calc_scores_Ris_etc(self):
+    def evaluate_weights_and_probabilities(self):
+        self._trajectories['obs'] = xr.open_mfdataset(f"{self._exp.dir_work}/REA_output/{self._exp.product_name}/NCAR/CESM2/{self._exp.initial_conditions_name}-x{self._exp.experiment_identifier[1]}/day/atmos/tas-reg/*/*", concat_dim='sim', combine='nested')['tas'].load()
         self._abs = self._trajectories['obs'].mean('time')
         self.calculate_time_sum_over_each_step()
         self.calculate_scores()
+        self.get_weight_from_algorithm()
         self.get_probabilities()
 
     def calculate_time_sum_over_each_step(self):
@@ -161,20 +163,21 @@ class ensemble_GKLT(ensemble):
     def calculate_scores(self):
         self._scores = np.exp(self._exp.k * self._time_sum_over_each_step)
 
-    def get_probabilities(self):
-        # what about last step??
-        self._p = self._trajectories['obs'].mean('time').copy() * np.nan
-        self._p[:] = np.array(
+    def get_weight_from_algorithm(self):
+        self._weight_from_algo = self._trajectories['obs'].mean('time').copy() * np.nan
+        self._weight_from_algo[:] = np.array(
             [
                 np.product(self._mean_scores[:-1]) / (np.product(self._scores[i,:-1]) * self._exp.n_members)
                 for i in range(self._exp.n_members)
             ]
         )
+
+    def get_probabilities(self):
         self._prob = self._trajectories['obs'].mean('time').copy() * np.nan
-        self._prob[:] = np.array([np.sum((self._abs >= a).astype(float) * self._p) for a in self._abs]) 
+        self._prob[:] = np.array([np.sum((self._abs >= a).astype(float) * self._weight_from_algo) for a in self._abs]) 
 
     def ra(self, x, thresh):
-        return -1 / np.log(1 - np.sum(self._p[x >= thresh].values))
+        return -1 / np.log(1 - np.sum(self._weight_from_algo[x >= thresh].values))
 
     ############
     # plotting #
