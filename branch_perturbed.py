@@ -39,7 +39,7 @@ parser.add_argument("--perturbation_order_of_magnitude", type=float, default=-13
 parser.add_argument("--store_perturbation_file", action='store_true')
 
 # directory where the user_nl files are found
-parser.add_argument("--user_nl_file_directory", type=str, default="default")
+parser.add_argument("--user_nl_file_directory", type=str)
 
 
 parser.add_argument("--verbose", action='store_true')
