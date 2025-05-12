@@ -14,6 +14,7 @@ realm_dict = {
 
 variable_dict = {
     'TREFHT' : 'tas',
+    'RHREFHT' : 'rhs',
     'U200' : 'ua200',
     'U500' : 'ua500',
     'V500' : 'va500',
@@ -42,7 +43,7 @@ def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor):
     return x, nc.attrs
 
 def open_initial(exp, sim_name, realm, h_identifier, variable, preprocessor):
-    archive_fldr = f"{exp.dir_archive}/GKLT/initial_{exp.initial_conditions_name}/{sim_name}"
+    archive_fldr = f"{exp.dir_archive}/GKLT/initial_{exp.initial_conditions_name}_{exp.start_date_in_year}/{sim_name}"
     h_files = glob.glob(f"{archive_fldr}/{realm}/hist/*{h_identifier}*.nc")
     with xr.open_mfdataset(h_files, preprocess=preprocessor) as nc:
         return nc[variable], nc.attrs
