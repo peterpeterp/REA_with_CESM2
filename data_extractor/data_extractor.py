@@ -101,7 +101,7 @@ def extract(
     for i,sim_name in enumerate(trajectory_names):
         ens_name = f"ens{str(i+1).zfill(3)}"
         out_dir = '/'.join([exp.dir_work] + [v for k,v in naming_d.items()] + [ens_name])
-        out_file_name = f"{out_dir}/{variable_dict[variable]+name_addition}_{time_frequency}_CESM2_{naming_d['experiment']}_{ens_name}_{exp.initial_condition_fake_year}.nc"
+        out_file_name = f"{out_dir}/{naming_d['variable']}_{naming_d['time_frequency']}_CESM2_{naming_d['experiment']}_{ens_name}_{exp.initial_condition_fake_year}.nc"
         print(out_file_name)
         if os.path.isfile(out_file_name) == False or overwrite:
             if 'initial' in experiment_identifier:
