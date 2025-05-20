@@ -121,6 +121,11 @@ def extract(
             ds = xr.Dataset({variable_dict[variable]:x})
             ds.attrs = attrs
             ds.attrs['simulation_name'] = sim_name
+            '''
+            I think the initial condition in the atributes is wrong
+            need to check
+            '''
+
             ds.attrs['initial_condition'] = exp.initial_conditions[i]
             ds.attrs['initial_condition_year'] = exp.initial_conditions[i].split('/')[-1].split('-')[0]
             ds.attrs['compset'] = exp.compset
