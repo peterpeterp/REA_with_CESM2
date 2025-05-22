@@ -16,8 +16,11 @@ parser.add_argument("--h_identifier", type=str)
 parser.add_argument("--time_frequency", type=str, default='day')
 parser.add_argument("--preprocessing", type=str, default='')
 parser.add_argument("--experiment_identifiers", nargs='+', default=[f"c{i}" for i in range(1,6)] + [f"p{i}" for i in range(1,6)] + ['c1_initial', 'p1_initial'])
+parser.add_argument("--end_step", type=int)
 parser.add_argument("--overwrite", action='store_true')
 command_line_arguments = parser.parse_args()
+
+print(command_line_arguments)
 
 sys.path.append(command_line_arguments.project_path)
 from experiment_configuration.experiment import experiment
@@ -46,5 +49,6 @@ for experiment_identifier in experiment_identifiers:
         h_identifier = h_identifier,
         time_frequency = time_frequency,
         preprocessing_module = preprocessing_module,
+        end_step = end_step,
         overwrite = overwrite,
     )

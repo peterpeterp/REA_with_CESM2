@@ -1,5 +1,5 @@
 import os,sys,subprocess,glob,cftime,importlib,pickle,itertools
-from datetime import datetime
+from datetime import datetime,timedelta
 import xarray as xr
 import numpy as np
 sys.path.append('../')
@@ -27,17 +27,17 @@ variable_dict = {
     'pr' : 'pr',
 }
 
-def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor):
-    todos = [['/'.join(sim_name.split('/')[:step])] for step in range(1,exp.n_steps+1)]
+def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_step=None):
+    todos = [['/'.join(sim_name.split('/')[:step])] for step in range(1,end_step+1)]
     l = []
-    for step in range(1,exp.n_steps+1):
+    for step in range(1,end_step+1):
         _sim_name_of_step_ = '/'.join(sim_name.split('/')[:step])
         h_files = glob.glob(f"{exp.dir_archive_post}/{_sim_name_of_step_}/{realm}/hist/*{h_identifier}*.nc")
         if len(h_files) == 1:
             with xr.open_mfdataset(h_files[0], preprocess=preprocessor) as nc:
                 l.append(nc[variable])
 
-    if len(l) == exp.n_steps:
+    if len(l) == end_step:
         x = xr.merge(l)[variable].sortby('time')
 
     return x, nc.attrs
@@ -57,6 +57,7 @@ def extract(
     h_identifier = 'h1',
     time_frequency = 'day',
     preprocessing_module = None,
+    end_step = None,
     overwrite = False,
 ):
 
@@ -68,8 +69,6 @@ def extract(
         preprocessor = None
         name_addition = ''
         preprocessing_attr = 'no preprocessing'   
-
-    
     
     naming_d = {
         "project": 'REA_output',
@@ -94,25 +93,30 @@ def extract(
     else:
         naming_d['experiment'] = f"{exp.initial_conditions_name}-x{exp.experiment_identifier[1]}"
         ens = ensemble_GKLT(exp)
-        trajectory_names = sorted([s for s in ens._sim_names if len(s.split('/')) == ens._exp.n_steps])
+        trajectory_names = sorted([s for s in ens._sim_names if len(s.split('/')) == end_step])
 
-
+    if end_step is None:
+        end_step = exp.n_steps
+    else:
+        naming_d['experiment'] += f"-step{end_step}"
 
     for i,sim_name in enumerate(trajectory_names):
         ens_name = f"ens{str(i+1).zfill(3)}"
         out_dir = '/'.join([exp.dir_work] + [v for k,v in naming_d.items()] + [ens_name])
+        #first_date = f"{exp.initial_condition_fake_year}-{exp.start_date_in_year}"
+        #last_date = str(datetime.strptime(first_date, "%Y-%m-%d") + timedelta(days=exp.n_days * end_step))[:10]
         out_file_name = f"{out_dir}/{naming_d['variable']}_{naming_d['time_frequency']}_CESM2_{naming_d['experiment']}_{ens_name}_{exp.initial_condition_fake_year}.nc"
-        print(out_file_name)
+        print(sim_name, out_file_name)
         if os.path.isfile(out_file_name) == False or overwrite:
             if 'initial' in experiment_identifier:
                 x, attrs = open_initial(exp, sim_name, realm, h_identifier, variable, preprocessor)
                 x = x.assign_coords(sim=sim_name)
             else:
-                x, attrs = open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor)
+                x, attrs = open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_step)
                 x = x.assign_coords(sim=sim_name)
 
             # time axis with same year
-            x = x.assign_coords(time=xr.date_range(f"{exp.initial_condition_fake_year}-{exp.start_date_in_year}", periods=exp.n_days*exp.n_steps + 1)[1:])
+            x = x.assign_coords(time=xr.date_range(f"{exp.initial_condition_fake_year}-{exp.start_date_in_year}", periods=exp.n_days*end_step + 1)[1:])
 
             # monthly average
             if time_frequency == 'mon':
