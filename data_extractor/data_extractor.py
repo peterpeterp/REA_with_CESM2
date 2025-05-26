@@ -25,6 +25,7 @@ variable_dict = {
     'SOILWATER_10CM' : 'mrsos',
     'NEP' : 'nep',
     'pr' : 'pr',
+    'LHFLX' : 'hfls',
 }
 
 def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_step=None):
@@ -87,6 +88,11 @@ def extract(
     if variable in ['ICEFRAC']:
         naming_d['realm'] = 'seaIce'
 
+    if end_step is None:
+        end_step = exp.n_steps
+    else:
+        naming_d['experiment'] += f"-step{end_step}"
+
     if 'initial' in experiment_identifier:
         naming_d['experiment'] = f"{exp.initial_conditions_name}-initial"
         trajectory_names = [ini.split('.')[-4] + '_' + ini.split('/')[-1].split('-')[0] for ini in exp.initial_conditions]
@@ -95,10 +101,6 @@ def extract(
         ens = ensemble_GKLT(exp)
         trajectory_names = sorted([s for s in ens._sim_names if len(s.split('/')) == end_step])
 
-    if end_step is None:
-        end_step = exp.n_steps
-    else:
-        naming_d['experiment'] += f"-step{end_step}"
 
     for i,sim_name in enumerate(trajectory_names):
         ens_name = f"ens{str(i+1).zfill(3)}"
