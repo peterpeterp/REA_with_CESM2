@@ -46,8 +46,25 @@ def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_ste
 def open_initial(exp, sim_name, realm, h_identifier, variable, preprocessor):
     archive_fldr = f"{exp.dir_archive}/GKLT/initial_{exp.initial_conditions_name}_{exp.start_date_in_year}/{sim_name}"
     h_files = glob.glob(f"{archive_fldr}/{realm}/hist/*{h_identifier}*.nc")
+
     with xr.open_mfdataset(h_files, preprocess=preprocessor) as nc:
         return nc[variable], nc.attrs
+
+def open_initial_before(exp, sim_name, realm, h_identifier, variable, preprocessor):
+    initial_archive = [s for s in exp.initial_conditions if s.split('/')[-1][:4] == sim_name.split('_')[-1] and s.split('.fE.')[0].split('.')[-1] == sim_name.split('_')[0] ][0]
+    if exp.initial_conditions_name == 'piControl':
+        initial_before_archive = initial_archive.split('/branch/')[0]
+        initial_year = initial_archive.split('/')[-1][:4]
+    else:
+        initial_before_archive = '/'.join(initial_archive.split('/')[:-1])
+        initial_year = int(initial_archive.split('/')[-1][:4])
+
+    h_files = glob.glob(f"{initial_before_archive}/atm/hist/*{h_identifier}.{initial_year}*")
+    print(h_files)
+    with xr.open_mfdataset(h_files, preprocess=preprocessor) as nc:
+        i_first_day = nc.time.loc[:f"{str(nc.time.dt.year.values[0]).zfill(4)}-{exp.start_date_in_year}"].shape[0]+1
+        return nc[variable][:i_first_day], nc.attrs
+
 
 
 def extract(
@@ -101,6 +118,11 @@ def extract(
         ens = ensemble_GKLT(exp)
         trajectory_names = sorted([s for s in ens._sim_names if len(s.split('/')) == end_step])
 
+    if 'before' in experiment_identifier:
+        naming_d['variable'] += '-before'
+
+    print(naming_d)
+
 
     for i,sim_name in enumerate(trajectory_names):
         ens_name = f"ens{str(i+1).zfill(3)}"
@@ -110,15 +132,18 @@ def extract(
         out_file_name = f"{out_dir}/{naming_d['variable']}_{naming_d['time_frequency']}_CESM2_{naming_d['experiment']}_{ens_name}_{exp.initial_condition_fake_year}.nc"
         print(sim_name, out_file_name)
         if os.path.isfile(out_file_name) == False or overwrite:
-            if 'initial' in experiment_identifier:
+            if 'initial_before' in experiment_identifier:
+                x, attrs = open_initial_before(exp, sim_name, realm, h_identifier, variable, preprocessor)
+                x = x.assign_coords(sim=sim_name)
+                x = x.assign_coords(time=xr.date_range(f"{exp.initial_condition_fake_year}-01-01", periods=len(x.time.values)))
+            elif 'initial' in experiment_identifier:
                 x, attrs = open_initial(exp, sim_name, realm, h_identifier, variable, preprocessor)
                 x = x.assign_coords(sim=sim_name)
+                x = x.assign_coords(time=xr.date_range(f"{exp.initial_condition_fake_year}-{exp.start_date_in_year}", periods=exp.n_days*end_step + 1)[1:])
             else:
                 x, attrs = open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_step)
                 x = x.assign_coords(sim=sim_name)
-
-            # time axis with same year
-            x = x.assign_coords(time=xr.date_range(f"{exp.initial_condition_fake_year}-{exp.start_date_in_year}", periods=exp.n_days*end_step + 1)[1:])
+                x = x.assign_coords(time=xr.date_range(f"{exp.initial_condition_fake_year}-{exp.start_date_in_year}", periods=exp.n_days*end_step + 1)[1:])
 
             # monthly average
             if time_frequency == 'mon':
