@@ -37,7 +37,7 @@ for experiment_identifier in experiment_identifiers:
     print(experiment_identifier)
     # load experiment configuration settings
     if 'initial' in experiment_identifier:
-        exp = experiment(importlib.import_module(f"experiment_configuration.{experiment_identifier.replace('_initial','')}").config)
+        exp = experiment(importlib.import_module(f"experiment_configuration.{experiment_identifier.replace('_initial','').replace('_before','')}").config)
     else:
         exp = experiment(importlib.import_module(f"experiment_configuration.{experiment_identifier}").config)
 

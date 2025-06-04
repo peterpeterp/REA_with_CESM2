@@ -26,6 +26,7 @@ variable_dict = {
     'NEP' : 'nep',
     'pr' : 'pr',
     'LHFLX' : 'hfls',
+    'SHFLX' : 'hfss',
 }
 
 def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_step=None):
