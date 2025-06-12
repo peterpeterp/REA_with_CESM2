@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--compset", type=str)
 
 # this only controls where the output is stored
-parser.add_argument("--dkrz_project", type=str)
+parser.add_argument("--dkrz_project_for_archive", type=str)
 
 # full path where restart files are taken from
 parser.add_argument("--parent_path", type=str)
@@ -47,7 +47,7 @@ parser.add_argument("--overwrite", action='store_true')
 args = parser.parse_args()
 
 # set archive dir
-dir_archive=f"/work/{args.dkrz_project}/u290372/cesm{conf.version}_archive"
+dir_archive=f"/work/{args.dkrz_project_for_archive}/u290372/cesm{conf.version}_archive"
 
 assert args.perturbation_seed == 0 or args.perturbation_type is not None, "specify perturbation type if perturbation_seed != 0"
 

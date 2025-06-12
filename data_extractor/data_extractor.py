@@ -35,8 +35,10 @@ def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_ste
     for step in range(1,end_step+1):
         _sim_name_of_step_ = '/'.join(sim_name.split('/')[:step])
         h_files = glob.glob(f"{exp.dir_archive_post}/{_sim_name_of_step_}/{realm}/hist/*{h_identifier}*.nc")
+        print(h_files)
         if len(h_files) == 1:
             with xr.open_mfdataset(h_files[0], preprocess=preprocessor) as nc:
+                print(nc)
                 l.append(nc[variable])
 
     if len(l) == end_step:
