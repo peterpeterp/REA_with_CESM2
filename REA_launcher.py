@@ -64,12 +64,12 @@ class launch_handler():
         Returns:
             command (str)
         '''
-        return f"sbatch --job-name={self._exp.experiment_identifier} --partition=compute --ntasks=1 --cpus-per-task=1 --time=00:20:00 --account=bb1445 --output=/scratch/u/u290372/log/%j --error=/scratch/u/u290372/log/%j python {self._exp.launching_script} " + " ".join([f"--{k} {v}" for k,v in todo.to_dict().items() if v != ""])
+        return f"python {self._exp.launching_script} " + " ".join([f"--{k} {v}" for k,v in todo.to_dict().items() if v != ""])
 
     def treat_todo(self, todo):
         status = self.check_status_of_todo(todo)
         if status == 'not launched':
-            self._todo_commands += [self.generate_launch_command(todo)]
+            self.run(self.generate_launch_command(todo))
 
     # run and print or just print or just run depending on command line parameters
     def run(self, command):
@@ -109,15 +109,14 @@ class launch_handler():
         # identify case that is used as source for precompiled copy
         todo_table_step_0 = self.prepare_todos_for_step_0()
         precompiled_path_used_later_on = todo_table_step_0.loc[1, 'precompiled_path']
-        run_directories_of_case = sorted(glob.glob(f"{dir_run}/GKLT/{self._exp.experiment_name}{'/*' * (step)}/run"))
+        run_directories_of_case = sorted(glob.glob(f"{dir_run}/GKLT/{self._exp.experiment_name}/step{step}/run"))
         for run_directory_of_case in run_directories_of_case:
             if run_directory_of_case != f"{dir_run}/{precompiled_path_used_later_on}/run":
                 self.run(f"rm -rf {run_directory_of_case}")
 
     def delete_restart_files_of_step_X(self, step):
         # identify case that is used as source for precompiled copy
-        todo_table_step_0 = self.prepare_todos_for_step_0()
-        rest_directories = sorted(glob.glob(f"{self._exp.dir_archive}/GKLT/{self._exp.experiment_name}{'/*' * (step)}/rest"))
+        rest_directories = sorted(glob.glob(f"{self._exp.dir_archive}/GKLT/{self._exp.experiment_name}/step{step}/rest"))
         for rest_directory in rest_directories:
             self.run(f"rm -rf {rest_directory}")
 
@@ -221,7 +220,7 @@ class launch_handler():
             for c in range(np.sum(clones_of == i_p)):
                 d = self._exp.launch_template.copy()
                 d['case_path'] = f"GKLT/{self._exp.experiment_name}/step{step}"
-                d['parent_path'] = f"{previous_todos.loc[i_p, 'case_path']}/{previous_todos.loc[i_p, 'case_identifier']}"
+                d['parent_path'] = f"{self._exp.dir_archive}/{previous_todos.loc[i_p, 'case_path']}/{previous_todos.loc[i_p, 'case_identifier']}"
                 d['perturbation_seed'] = 1 + step + i_p * 10 + c + self._exp.seed
                 d['case_identifier'] = f"{self._exp.experiment_identifier}_{str(member).zfill(3)}"
                 l.append(d)
@@ -235,7 +234,7 @@ class launch_handler():
 
     def do_what_has_to_be_done(self):
 
-        self._todo_commands = []
+        self._todo_text = ''
 
         # go backwards from last step
         for step in range(self._exp.n_steps, -1, -1):
@@ -316,16 +315,9 @@ class launch_handler():
                     print('needs a fix')
                     exit(0)
 
-        if len(self._todo_commands) > 0:
-            job_text = sbatch_job_header
-            job_text += f"#SBATCH --job-name={self._exp.experiment_identifier}_step{step}\n"
-            job_text += f"#SBATCH --account={self._exp.dkrz_project_for_accounting}\n"
-
-            job_text += modules_text + '\n'
-
-            job_text += '\n'.join(self._todo_commands)
+        if self._todo_text != '':
             with open(f"slurm_job_files/job_{self._exp.experiment_identifier}_step{step}", 'w') as job_file:
-                job_file.write(job_text)            
+                job_file.write(self._todo_text)            
 
         if self._relaunch_after_completion:
             self.resubmit_after_completion_of_previous_runs(step + 1)
@@ -345,6 +337,7 @@ class launch_handler():
             new_slurm_job += f"#SBATCH --job-name={self._exp.experiment_identifier}_step{step}\n"
             new_slurm_job += f"#SBATCH --account={self._exp.dkrz_project_for_accounting}\n"
             new_slurm_job += f"#SBATCH --begin=now+10minute\n"
+            new_slurm_job += sbatch_settings
 
             if len(job_ids_to_wait_for) > 0:
                 new_slurm_job += f"#SBATCH --dependency=afterok:{','.join(job_ids_to_wait_for)}\n"

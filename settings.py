@@ -31,7 +31,7 @@ sbatch_job_header = '''#!/bin/bash\n
 #SBATCH --partition=compute     # Specify partition name
 #SBATCH --ntasks=1             # Specify max. number of tasks to be invoked
 #SBATCH --cpus-per-task=1     # Specify number of CPUs per task
-#SBATCH --time=00:20:00        # Set a limit on the total run time
+#SBATCH --time=04:00:00        # Set a limit on the total run time
 #SBATCH --output=log/%j    # File name for standard output
 #SBATCH --error=log/%j    # File name for standard error output
 '''
