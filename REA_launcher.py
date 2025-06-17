@@ -64,12 +64,12 @@ class launch_handler():
         Returns:
             command (str)
         '''
-        return f"python {self._exp.launching_script} " + " ".join([f"--{k} {v}" for k,v in todo.to_dict().items() if v != ""])
+        return f"sbatch --job-name={self._exp.experiment_identifier} --partition=compute --ntasks=1 --cpus-per-task=1 --time=00:20:00 --account=bb1445 --output=/scratch/u/u290372/log/%j --error=/scratch/u/u290372/log/%j python {self._exp.launching_script} " + " ".join([f"--{k} {v}" for k,v in todo.to_dict().items() if v != ""])
 
     def treat_todo(self, todo):
         status = self.check_status_of_todo(todo)
         if status == 'not launched':
-            self.run(self.generate_launch_command(todo))
+            self._todo_commands += [self.generate_launch_command(todo)]
 
     # run and print or just print or just run depending on command line parameters
     def run(self, command):
@@ -220,8 +220,8 @@ class launch_handler():
         for i_p in np.unique(clones_of):
             for c in range(np.sum(clones_of == i_p)):
                 d = self._exp.launch_template.copy()
-                d['case_path'] = f"{previous_todos.loc[i_p, 'case_path']}/{previous_todos.loc[i_p, 'case_identifier']}"
-                d['parent_path'] = f"{self._exp.dir_archive}/{d['case_path']}"
+                d['case_path'] = f"GKLT/{self._exp.experiment_name}/step{step}"
+                d['parent_path'] = f"{previous_todos.loc[i_p, 'case_path']}/{previous_todos.loc[i_p, 'case_identifier']}"
                 d['perturbation_seed'] = 1 + step + i_p * 10 + c + self._exp.seed
                 d['case_identifier'] = f"{self._exp.experiment_identifier}_{str(member).zfill(3)}"
                 l.append(d)
@@ -234,6 +234,9 @@ class launch_handler():
         return todo_table
 
     def do_what_has_to_be_done(self):
+
+        self._todo_commands = []
+
         # go backwards from last step
         for step in range(self._exp.n_steps, -1, -1):
             # check if previous step has been started
@@ -261,9 +264,9 @@ class launch_handler():
             if np.all(status_l == 'done'):
                 print(f"step {step} is done")
                 print(f"cleaning run directories of {step -1}")
-                self.clean_run_directories_of_step_X(step - 1)
+                #self.clean_run_directories_of_step_X(step - 1)
                 print(f"deleting restart files of {step - 2}")
-                self.delete_restart_files_of_step_X(step - 2)
+                #self.delete_restart_files_of_step_X(step - 2)
                 print(f"need to do step {step}")
                 todo_table = self.prepare_todos_for_step_X(step)
                 # launch simulations
@@ -313,6 +316,17 @@ class launch_handler():
                     print('needs a fix')
                     exit(0)
 
+        if len(self._todo_commands) > 0:
+            job_text = sbatch_job_header
+            job_text += f"#SBATCH --job-name={self._exp.experiment_identifier}_step{step}\n"
+            job_text += f"#SBATCH --account={self._exp.dkrz_project_for_accounting}\n"
+
+            job_text += modules_text + '\n'
+
+            job_text += '\n'.join(self._todo_commands)
+            with open(f"slurm_job_files/job_{self._exp.experiment_identifier}_step{step}", 'w') as job_file:
+                job_file.write(job_text)            
+
         if self._relaunch_after_completion:
             self.resubmit_after_completion_of_previous_runs(step + 1)
 
@@ -327,26 +341,15 @@ class launch_handler():
             # this did not work because some jobs finish before the next one is launched ?!?
             #SBATCH --job-name=launch_{self._exp.experiment_identifier}_step{step+1}
 
-            new_slurm_job = f"#!/bin/bash\n"
+            new_slurm_job = sbatch_job_header
             new_slurm_job += f"#SBATCH --job-name={self._exp.experiment_identifier}_step{step}\n"
-            new_slurm_job += f"#SBATCH --begin=now+10minute\n"
-            new_slurm_job += f"#SBATCH --partition=compute\n"
-            new_slurm_job += f"#SBATCH --ntasks=1\n"
-            new_slurm_job += f"#SBATCH --cpus-per-task=1\n"
-            new_slurm_job += f"#SBATCH --time=04:00:00\n"
             new_slurm_job += f"#SBATCH --account={self._exp.dkrz_project_for_accounting}\n"
-            new_slurm_job += f"#SBATCH --output=log/%j\n"
-            new_slurm_job += f"#SBATCH --error=log/%j\n"
+            new_slurm_job += f"#SBATCH --begin=now+10minute\n"
 
             if len(job_ids_to_wait_for) > 0:
                 new_slurm_job += f"#SBATCH --dependency=afterok:{','.join(job_ids_to_wait_for)}\n"
 
-            new_slurm_job += "module purge\n"
-            new_slurm_job += "module load subversion python3/2022.01-gcc-11.2.0 esmf/8.2.0-intel-2021.5.0\n"
-            new_slurm_job += "module load esmf/8.2.0-intel-2021.5.0 gcc intel-oneapi-compilers/2022.0.1-gcc-11.2.0 intel-oneapi-mkl/2022.0.1-gcc-11.2.0\n"
-            new_slurm_job += "module load openmpi/4.1.2-intel-2021.5.0\n"
-            new_slurm_job += "module load cdo nco python3/2022.01-gcc-11.2.0\n"
-            new_slurm_job += "module load nano emacs ncview tree\n"
+            new_slurm_job += modules_text
 
             new_slurm_job += f"python main_launcher.py --experiment {self._exp.experiment_identifier}"
             for cmd_line_argument in ['verbose','dry_run','relaunch_cases_which_are_unclear', 'relaunch_after_completion']:
