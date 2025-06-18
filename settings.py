@@ -18,7 +18,7 @@ dir_repo=f"/home/u/u290372/projects/cesm215_peters_scripts/"
 dir_user_nl = f"~/projects/cesm215_peters_scripts/cesm215_user_nl"
 
 
-modules_text = '''
+sbatch_modules = '''
 module purge
 module load subversion python3/2022.01-gcc-11.2.0 esmf/8.2.0-intel-2021.5.0
 module load esmf/8.2.0-intel-2021.5.0 gcc intel-oneapi-compilers/2022.0.1-gcc-11.2.0 intel-oneapi-mkl/2022.0.1-gcc-11.2.0

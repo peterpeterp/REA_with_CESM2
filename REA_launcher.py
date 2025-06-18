@@ -234,7 +234,6 @@ class launch_handler():
 
     def do_what_has_to_be_done(self):
 
-        self._todo_text = ''
 
         # go backwards from last step
         for step in range(self._exp.n_steps, -1, -1):
@@ -268,10 +267,11 @@ class launch_handler():
                 #self.delete_restart_files_of_step_X(step - 2)
                 print(f"need to do step {step}")
                 todo_table = self.prepare_todos_for_step_X(step)
+                todo_table.to_csv(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}.csv")
+
                 # launch simulations
                 for i in todo_table.index:
                     self.treat_todo(todo_table.loc[i])
-                todo_table.to_csv(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}.csv")
                 print(f"working on step {step}")
 
             elif np.any(status_l == 'not launched'):                
@@ -313,11 +313,7 @@ class launch_handler():
 
                 if self._relaunch_cases_which_are_unclear == False:
                     print('needs a fix')
-                    exit(0)
-
-        if self._todo_text != '':
-            with open(f"slurm_job_files/job_{self._exp.experiment_identifier}_step{step}", 'w') as job_file:
-                job_file.write(self._todo_text)            
+                    exit(0)          
 
         if self._relaunch_after_completion:
             self.resubmit_after_completion_of_previous_runs(step + 1)
@@ -337,12 +333,11 @@ class launch_handler():
             new_slurm_job += f"#SBATCH --job-name={self._exp.experiment_identifier}_step{step}\n"
             new_slurm_job += f"#SBATCH --account={self._exp.dkrz_project_for_accounting}\n"
             new_slurm_job += f"#SBATCH --begin=now+10minute\n"
-            new_slurm_job += sbatch_settings
 
             if len(job_ids_to_wait_for) > 0:
                 new_slurm_job += f"#SBATCH --dependency=afterok:{','.join(job_ids_to_wait_for)}\n"
 
-            new_slurm_job += modules_text
+            new_slurm_job += sbatch_modules
 
             new_slurm_job += f"python main_launcher.py --experiment {self._exp.experiment_identifier}"
             for cmd_line_argument in ['verbose','dry_run','relaunch_cases_which_are_unclear', 'relaunch_after_completion']:

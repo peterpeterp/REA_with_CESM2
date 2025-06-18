@@ -42,6 +42,7 @@ class ensemble_GKLT(ensemble):
         self._name = exp.experiment_name
         super().__init__(exp)
         self.get_sim_names()
+        self.build_forest()
 
         # Ris
         self._mean_scores = np.array([
@@ -57,27 +58,87 @@ class ensemble_GKLT(ensemble):
     def get_sim_names(self, overwrite=False):
         file_name = f"{self._exp.dir_out}/sim_names.txt"
         if os.path.isfile(file_name) == False or overwrite:
-            todo_tables = {}
-            steps = np.arange(0,self._exp.n_steps,1,'int')
-            for step in steps:
-                todo_tables[step] = pd.read_table(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}.csv", sep=',')
-                todo_tables[step]['parent_identifier'] = [p.split('/')[-1] for p in todo_tables[step]['parent_path']]
-
-
             self._sim_names = []
-            for i in todo_tables[step].index:
-                sim_name = self._exp.experiment_identifier + '.'
-                sim_name += todo_tables[steps[-1]].loc[i, 'case_identifier'].split('_')[-1]
-                parent_name = todo_tables[steps[-1]].loc[i, 'parent_identifier']
-                for step in steps[::-1][1:]:
-                    sim_name += '.' + todo_tables[step].loc[todo_tables[step].case_identifier == parent_name, 'case_identifier'].values[0].split('_')[-1]
-                    parent_name = todo_tables[step].loc[todo_tables[step].case_identifier == parent_name, 'parent_identifier'].values[0]
-                self._sim_names.append(sim_name)
+            for step in range(self._exp.n_steps):
+                sim_paths = sorted([p for p in glob.glob(f"{self._exp.dir_archive_post}/*/{'/*'*step}/atm")])
+                self._sim_names += [p.replace(f"{self._exp.dir_archive_post}/","").replace('/atm','') for p in sim_paths]
+
             self._sim_names = np.array(self._sim_names)
             with open(file_name, 'w') as fl:
                 fl.write(';'.join(self._sim_names))
         else:
             self._sim_names = open(file_name, 'r').read().split(';')
+
+    def build_forest(self):
+        self._forest = {}
+        for sim_name in self._sim_names:
+            self._forest[sim_name] = simulation_tree(sim_name, self._forest)
+
+    def fill_forest_with_pieces(self, var_name):
+        for sim_name in self._forest.keys():
+            self._forest[sim_name]._data[var_name] = xr.open_dataset(f"{self._exp.dir_archive_post}/{sim_name}/post/{var_name}.nc")[var_name]         
+
+    def print_tree(self, initial_name, show_uncomplete=False, print_weight=False):
+        class bcolors:
+            HEADER = '\033[95m'
+            OKBLUE = '\033[94m'
+            OKCYAN = '\033[96m'
+            OKGREEN = '\033[92m'
+            WARNING = '\033[93m'
+            FAIL = '\033[91m'
+            ENDC = '\033[0m'
+            BOLD = '\033[1m'
+            UNDERLINE = '\033[4m'
+
+        sims = sorted([s for s in self._sim_names if len(s.split('/')) == self._exp.n_steps])
+        sims = np.array([s.split('/') for s in sims])
+
+        for pre, fill, node in RenderTree(self._forest[initial_name]):
+            p = node
+            l = [p.name]
+            step = 1
+            while p.parent is not None:
+                p = p.parent
+                l += [f'{p.name}']
+                step += 1
+            s = '/'.join(l[::-1])
+            w = ''
+            if print_weight:
+                if step == self._exp.n_steps:
+                    w = f"  -> {float(self._weight.loc[s]):.2f}"
+
+            if sum([s in '/'.join(sims[i,:step]) for i in range(sims.shape[0])]) > 0:
+                print(bcolors.WARNING + f"{pre}{node.name}{w}" + bcolors.ENDC)
+            else:
+                if show_uncomplete:
+                    print(bcolors.OKCYAN + "%s%s" % (pre, node.name) + bcolors.ENDC)
+
+    def get_weights_uniqueness(self):
+        '''
+        weights based on uniqueness
+        '''
+        sims = sorted([s for s in self._sim_names if len(s.split('/')) == self._exp.n_steps])
+        weight = xr.DataArray(dims=['sim','step'], coords=dict(sim=sims,step=np.arange(0,self._exp.n_steps,1,'int')))
+        weight_daily = xr.DataArray(
+            dims=['sim','step','time'], 
+            coords=dict(sim=sims,step=np.arange(0,self._exp.n_steps,1,'int'),time=np.arange(0,self._exp.n_days,1,'int'))
+        )
+        sims = np.array([s.split('/') for s in sims])
+
+        for step in weight.step.values:
+            for v in np.unique(sims[:,step]):
+                same = (sims[:,step] == v)
+                weight[same, step] = 1 / same.sum()
+                weight_daily[same, step] = 1 / same.sum()
+
+        self._weight = weight.mean('step')
+        self._weight_stepwise = weight
+        self._weight_daily = xr.DataArray(
+            weight_daily.values.reshape((self._exp.n_members, self._exp.n_steps * self._exp.n_days)),
+            dims = ['sim','time'],
+            coords = dict(sim=weight.sim, time=np.arange(0,self._exp.n_days * self._exp.n_steps,1,'int'))
+        )
+        return weight
 
     ##################
     # First analysis #

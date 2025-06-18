@@ -38,6 +38,11 @@ for experiment_identifier in experiment_identifiers:
     # load experiment configuration settings
     if 'initial' in experiment_identifier:
         exp = experiment(importlib.import_module(f"experiment_configuration.{experiment_identifier.replace('_initial','').replace('_before','')}").config)
+        if 'before' in experiment_identifier:
+            exp.ensemble_type = 'before'
+        else:
+            exp.ensemble_type = 'initial'
+
     else:
         exp = experiment(importlib.import_module(f"experiment_configuration.{experiment_identifier}").config)
 

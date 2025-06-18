@@ -29,7 +29,20 @@ variable_dict = {
     'SHFLX' : 'hfss',
 }
 
+
 def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_step=None):
+    l = []
+    for step,sim_identifier_in_step in enumerate(sim_name.split('.')[1:]):
+        h_files = glob.glob(f"{exp.dir_archive_post}/step{step}/{exp.experiment_identifier}_{sim_identifier_in_step}/{realm}/hist/*{h_identifier}*.nc")
+        if len(h_files) == 1:
+            with xr.open_mfdataset(h_files[0], preprocess=preprocessor) as nc:
+                l.append(nc[variable])
+    if len(l) == end_step:
+        x = xr.concat(l, dim='time')
+        
+    return x, nc.attrs
+
+def open_rea_legacy(exp, sim_name, realm, h_identifier, variable, preprocessor, end_step=None):
     todos = [['/'.join(sim_name.split('/')[:step])] for step in range(1,end_step+1)]
     l = []
     for step in range(1,end_step+1):
@@ -113,13 +126,20 @@ def extract(
     else:
         naming_d['experiment'] += f"-step{end_step}"
 
-    if 'initial' in experiment_identifier:
+    if exp.ensemble_type == 'initial' or exp.ensemble_type == 'before':
         naming_d['experiment'] = f"{exp.initial_conditions_name}-initial"
         trajectory_names = [ini.split('.')[-4] + '_' + ini.split('/')[-1].split('-')[0] for ini in exp.initial_conditions]
-    else:
+    elif exp.ensemble_type == 'rea_legacy':
         naming_d['experiment'] = f"{exp.initial_conditions_name}-x{exp.experiment_identifier[1]}"
         ens = ensemble_GKLT(exp)
         trajectory_names = sorted([s for s in ens._sim_names if len(s.split('/')) == end_step])
+    elif exp.ensemble_type == 'rea':
+        naming_d['experiment'] = f"{exp.initial_conditions_name}-x{exp.experiment_identifier[1]}"
+        ens = ensemble_GKLT(exp)
+        trajectory_names = ens._sim_names
+    else:
+        assert False, 'need ensemble_type'
+
 
     if 'before' in experiment_identifier:
         naming_d['variable'] += '-before'
@@ -135,18 +155,24 @@ def extract(
         out_file_name = f"{out_dir}/{naming_d['variable']}_{naming_d['time_frequency']}_CESM2_{naming_d['experiment']}_{ens_name}_{exp.initial_condition_fake_year}.nc"
         print(sim_name, out_file_name)
         if os.path.isfile(out_file_name) == False or overwrite:
-            if 'initial_before' in experiment_identifier:
+            if exp.ensemble_type == 'before':
                 x, attrs = open_initial_before(exp, sim_name, realm, h_identifier, variable, preprocessor)
                 x = x.assign_coords(sim=sim_name)
                 x = x.assign_coords(time=xr.date_range(f"{exp.initial_condition_fake_year}-01-01", periods=len(x.time.values)))
-            elif 'initial' in experiment_identifier:
+            elif exp.ensemble_type == 'initial':
                 x, attrs = open_initial(exp, sim_name, realm, h_identifier, variable, preprocessor)
                 x = x.assign_coords(sim=sim_name)
                 x = x.assign_coords(time=xr.date_range(f"{exp.initial_condition_fake_year}-{exp.start_date_in_year}", periods=exp.n_days*end_step + 1)[1:])
-            else:
+            elif exp.ensemble_type == 'rea_legacy':
+                x, attrs = open_rea_legacy(exp, sim_name, realm, h_identifier, variable, preprocessor, end_step)
+                x = x.assign_coords(sim=sim_name)
+                x = x.assign_coords(time=xr.date_range(f"{exp.initial_condition_fake_year}-{exp.start_date_in_year}", periods=exp.n_days*end_step + 1)[1:])
+            elif exp.ensemble_type == 'rea':
                 x, attrs = open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_step)
                 x = x.assign_coords(sim=sim_name)
                 x = x.assign_coords(time=xr.date_range(f"{exp.initial_condition_fake_year}-{exp.start_date_in_year}", periods=exp.n_days*end_step + 1)[1:])
+            else:
+                assert False, 'need ensemble_type'
 
             # monthly average
             if time_frequency == 'mon':
