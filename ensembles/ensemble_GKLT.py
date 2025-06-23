@@ -79,6 +79,30 @@ class ensemble_GKLT(ensemble):
         else:
             self._sim_names = open(file_name, 'r').read().split(';')
 
+    def get_weights_uniqueness(self):
+        '''
+        weights based on uniqueness
+        '''
+
+        self._uniq_stepwise = xr.DataArray(dims=['sim','step'], coords=dict(sim=self._sim_names,step=np.arange(0,self._exp.n_steps,1,'int')))
+        uniq_daily = xr.DataArray(
+            dims=['sim','step','time'], 
+            coords=dict(sim=self._sim_names,step=np.arange(0,self._exp.n_steps,1,'int'),time=np.arange(0,self._exp.n_days,1,'int'))
+        )
+        sims = np.array([s.split('.')[1:] for s in self._sim_names])
+        for step in self._uniq_stepwise.step.values:
+            for v in np.unique(sims[:,step]):
+                same = (sims[:,step] == v)
+                self._uniq_stepwise[same, step] = 1 / same.sum()
+                uniq_daily[same, step] = 1 / same.sum()
+
+        self._uniq_seas = self._uniq_stepwise.mean('step')
+        self._uniq_daily = xr.DataArray(
+                    uniq_daily.values.reshape((self._exp.n_members, self._exp.n_steps * self._exp.n_days)),
+                    dims = ['sim','time'],
+                    coords = dict(sim=self._uniq_stepwise.sim, time=np.arange(0,self._exp.n_days * self._exp.n_steps,1,'int'))
+                )
+
     ##################
     # First analysis #
     ##################

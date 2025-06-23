@@ -109,14 +109,14 @@ class launch_handler():
         # identify case that is used as source for precompiled copy
         todo_table_step_0 = self.prepare_todos_for_step_0()
         precompiled_path_used_later_on = todo_table_step_0.loc[1, 'precompiled_path']
-        run_directories_of_case = sorted(glob.glob(f"{dir_run}/GKLT/{self._exp.experiment_name}/step{step}/run"))
+        run_directories_of_case = sorted(glob.glob(f"{dir_run}/GKLT/{self._exp.experiment_name}/step{step}/*/run"))
         for run_directory_of_case in run_directories_of_case:
             if run_directory_of_case != f"{dir_run}/{precompiled_path_used_later_on}/run":
                 self.run(f"rm -rf {run_directory_of_case}")
 
     def delete_restart_files_of_step_X(self, step):
         # identify case that is used as source for precompiled copy
-        rest_directories = sorted(glob.glob(f"{self._exp.dir_archive}/GKLT/{self._exp.experiment_name}/step{step}/rest"))
+        rest_directories = sorted(glob.glob(f"{self._exp.dir_archive}/GKLT/{self._exp.experiment_name}/step{step}/*/rest"))
         for rest_directory in rest_directories:
             self.run(f"rm -rf {rest_directory}")
 
@@ -130,7 +130,7 @@ class launch_handler():
         for member in range(self._exp.n_members):
             d = self._exp.launch_template.copy()
             d['parent_path'] = self._exp.initial_conditions[member]
-            d['case_path'] = f"GKLT/{self._exp.experiment_name}"
+            d['case_path'] = f"GKLT/{self._exp.experiment_name}/step0"
             d['perturbation_seed'] = 1 + member*10 + self._exp.seed
             d['case_identifier'] = f"{self._exp.experiment_identifier}_{str(member).zfill(3)}"
             l.append(d)
@@ -139,7 +139,7 @@ class launch_handler():
         todo_table = pd.DataFrame(l)
 
         # use compilation of first launched simulation
-        precompiled_name = f"GKLT/{self._exp.experiment_name}/{todo_table.loc[0,'case_identifier']}"
+        precompiled_name = f"GKLT/{self._exp.experiment_name}/step0/{todo_table.loc[0,'case_identifier']}"
         todo_table['precompiled_path'] = precompiled_name
         todo_table.loc[0, 'precompiled_path'] = ""
         return todo_table
@@ -262,9 +262,9 @@ class launch_handler():
             if np.all(status_l == 'done'):
                 print(f"step {step} is done")
                 print(f"cleaning run directories of {step -1}")
-                #self.clean_run_directories_of_step_X(step - 1)
+                self.clean_run_directories_of_step_X(step - 1)
                 print(f"deleting restart files of {step - 2}")
-                #self.delete_restart_files_of_step_X(step - 2)
+                self.delete_restart_files_of_step_X(step - 2)
                 print(f"need to do step {step}")
                 todo_table = self.prepare_todos_for_step_X(step)
                 todo_table.to_csv(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}.csv")
