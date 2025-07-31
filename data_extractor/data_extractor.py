@@ -35,7 +35,8 @@ def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_ste
     for step,sim_identifier_in_step in enumerate(sim_name.split('.')[1:]):
         h_files = glob.glob(f"{exp.dir_archive_post}/step{step}/{exp.experiment_identifier}_{sim_identifier_in_step}/{realm}/hist/*{h_identifier}*.nc")
         if len(h_files) == 1:
-            with xr.open_mfdataset(h_files[0], preprocess=preprocessor) as nc:
+            with xr.open_mfdataset(h_files[0]) as nc:
+                nc = preprocessor(nc, variable)
                 l.append(nc[variable])
     if len(l) == end_step:
         x = xr.concat(l, dim='time')
@@ -50,8 +51,8 @@ def open_rea_legacy(exp, sim_name, realm, h_identifier, variable, preprocessor, 
         h_files = glob.glob(f"{exp.dir_archive_post}/{_sim_name_of_step_}/{realm}/hist/*{h_identifier}*.nc")
         print(h_files)
         if len(h_files) == 1:
-            with xr.open_mfdataset(h_files[0], preprocess=preprocessor) as nc:
-                print(nc)
+            with xr.open_mfdataset(h_files[0]) as nc:
+                nc = preprocessor(nc, variable)
                 l.append(nc[variable])
 
     if len(l) == end_step:
@@ -63,7 +64,8 @@ def open_initial(exp, sim_name, realm, h_identifier, variable, preprocessor):
     archive_fldr = f"{exp.dir_archive}/GKLT/initial_{exp.initial_conditions_name}_{exp.start_date_in_year}/{sim_name}"
     h_files = glob.glob(f"{archive_fldr}/{realm}/hist/*{h_identifier}*.nc")
 
-    with xr.open_mfdataset(h_files, preprocess=preprocessor) as nc:
+    with xr.open_mfdataset(h_files) as nc:
+        nc = preprocessor(nc, variable)
         return nc[variable], nc.attrs
 
 def open_initial_before(exp, sim_name, realm, h_identifier, variable, preprocessor):
@@ -77,7 +79,8 @@ def open_initial_before(exp, sim_name, realm, h_identifier, variable, preprocess
 
     h_files = glob.glob(f"{initial_before_archive}/atm/hist/*{h_identifier}.{initial_year}*")
     print(h_files)
-    with xr.open_mfdataset(h_files, preprocess=preprocessor) as nc:
+    with xr.open_mfdataset(h_files) as nc:
+        nc = preprocessor(nc, variable)
         i_first_day = nc.time.loc[:f"{str(nc.time.dt.year.values[0]).zfill(4)}-{exp.start_date_in_year}"].shape[0]+1
         return nc[variable][:i_first_day], nc.attrs
 
@@ -130,11 +133,13 @@ def extract(
         naming_d['experiment'] = f"{exp.initial_conditions_name}-initial"
         trajectory_names = [ini.split('.')[-4] + '_' + ini.split('/')[-1].split('-')[0] for ini in exp.initial_conditions]
     elif exp.ensemble_type == 'rea_legacy':
-        naming_d['experiment'] = f"{exp.initial_conditions_name}-x{exp.experiment_identifier[1]}"
+        exp_new_name = ''.join(exp.experiment_identifier.split('_')[0][1:])
+        naming_d['experiment'] = f"{exp.initial_conditions_name}-x{exp_new_name}"
         ens = ensemble_GKLT(exp)
         trajectory_names = sorted([s for s in ens._sim_names if len(s.split('/')) == end_step])
     elif exp.ensemble_type == 'rea':
-        naming_d['experiment'] = f"{exp.initial_conditions_name}-x{exp.experiment_identifier[1]}"
+        exp_new_name = ''.join(exp.experiment_identifier.split('_')[0][1:])
+        naming_d['experiment'] = f"{exp.initial_conditions_name}-x{exp_new_name}"
         ens = ensemble_GKLT(exp)
         trajectory_names = ens._sim_names
     else:

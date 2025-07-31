@@ -1,4 +1,5 @@
 data_extractor/log
+data_extractor/tmp
 log
 *.pyc
 __pycache__
