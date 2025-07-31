@@ -42,7 +42,7 @@ class ensemble_GKLT(ensemble):
         self._name = exp.experiment_name
         super().__init__(exp)
         self.get_sim_names()
-
+        
         # Ris
         self._mean_scores = np.array([
             pd.read_table(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}_evaluation.csv", sep=',')['score'].values.mean()
@@ -107,27 +107,24 @@ class ensemble_GKLT(ensemble):
     # First analysis #
     ##################
 
-    def evaluate_weights_and_probabilities(self):
-        self._trajectories['obs'] = xr.open_mfdataset(f"{self._exp.dir_work}/REA_output/{self._exp.product_name}/NCAR/CESM2/{self._exp.initial_conditions_name}-x{self._exp.experiment_identifier[1]}/day/atmos/tas-reg/*/*", concat_dim='sim', combine='nested')['tas'].load()
-        self._abs = self._trajectories['obs'].mean('time')
-        self.calculate_time_sum_over_each_step()
-        self.calculate_scores()
-        self.get_weight_from_algorithm()
-        self.get_probabilities()
+    def evaluate_weights_and_probabilities(self, obs):
+        self._obs = obs
+        self._abs = self._obs.mean('time')
 
-    def calculate_time_sum_over_each_step(self):
         x = xr.DataArray(
-            self._trajectories['obs'].values.reshape((-1, self._exp.n_steps, self._exp.n_days)),
+            self._obs.values.reshape((-1, self._exp.n_steps, self._exp.n_days)),
             dims=['sim','step','time'],
-            coords=dict(sim=self._trajectories['obs'].sim, step=np.arange(0,self._exp.n_steps,1,'int'), time=np.arange(0,self._exp.n_days,1,'int'))
+            coords=dict(sim=self._obs.sim, step=np.arange(0,self._exp.n_steps,1,'int'), time=np.arange(0,self._exp.n_days,1,'int'))
         )
-        self._time_sum_over_each_step = x.sum('time')
 
-    def calculate_scores(self):
-        self._scores = np.exp(self._exp.k * self._time_sum_over_each_step)
+        if self._exp.ensemble_type == 'rea':
+            self._time_aggregation_over_each_step = x.mean('time')
+        elif self._exp.ensemble_type == 'rea_legacy':
+            self._time_aggregation_over_each_step = x.sum('time')
 
-    def get_weight_from_algorithm(self):
-        self._weight_from_algo = self._trajectories['obs'].mean('time').copy() * np.nan
+        self._scores = np.exp(self._exp.k * self._time_aggregation_over_each_step)
+
+        self._weight_from_algo = self._obs.mean('time').copy() * np.nan
         self._weight_from_algo[:] = np.array(
             [
                 np.product(self._mean_scores[:-1]) / (np.product(self._scores[i,:-1]) * self._exp.n_members)
@@ -135,8 +132,7 @@ class ensemble_GKLT(ensemble):
             ]
         )
 
-    def get_probabilities(self):
-        self._prob = self._trajectories['obs'].mean('time').copy() * np.nan
+        self._prob = self._obs.mean('time').copy() * np.nan
         self._prob[:] = np.array([np.sum((self._abs >= a).astype(float) * self._weight_from_algo) for a in self._abs]) 
 
     def ra(self, x, thresh):

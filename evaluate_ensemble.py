@@ -20,18 +20,24 @@ for experiment_identifier in command_line_arguments.experiment_identifiers:
     print(experiment_identifier)
     exp = experiment(importlib.import_module(f"experiment_configuration.{experiment_identifier}").config)
 
+    exp_new_name = ''.join(exp.experiment_identifier.split('_')[0][1:])
+
     naming_d = {
         "project": 'REA_output',
         "product": exp.product_name,
         "institute": 'NCAR',
         "model": 'CESM2',
-        "experiment" : f"{exp.initial_conditions_name}-x{exp.experiment_identifier[1]}",
+        "experiment" : f"{exp.initial_conditions_name}-x{exp_new_name}",
         "realm": "meta",
     }
     out_dir = '/'.join([exp.dir_work] + [v for k,v in naming_d.items()])
+    os.makedirs(out_dir, exist_ok=True)
+
+    obs = xr.open_mfdataset(f"{exp.dir_work}/REA_output/{exp.product_name}/NCAR/CESM2/{exp.initial_conditions_name}-x{exp_new_name}/day/atmos/tas-reg/*/*", concat_dim='sim', combine='nested')['tas'].load()
 
     ens = ensemble_GKLT(exp)
-    ens.evaluate_weights_and_probabilities()
-
+    ens.evaluate_weights_and_probabilities(obs)
+    print(ens._prob)
+    print(ens._weight_from_algo)
     xr.Dataset({'probability':ens._prob}).to_netcdf(f"{out_dir}/probability_season_{naming_d['experiment']}.nc")
     xr.Dataset({'weight':ens._weight_from_algo}).to_netcdf(f"{out_dir}/weight_season_{naming_d['experiment']}.nc")
