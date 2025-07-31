@@ -253,6 +253,7 @@ class launch_handler():
 
         else:
             # check if previous step is completed
+            previous_todo_csv = f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step-1}.csv"
             previous_todos = pd.read_csv(previous_todo_csv, index_col=0, keep_default_na=False)
             status_l = np.array(['']*self._exp.n_members, dtype='<U20')
             previous_todos=previous_todos.reindex(columns=[previous_todos.columns[-1]] + list(previous_todos.columns[:-1]))
