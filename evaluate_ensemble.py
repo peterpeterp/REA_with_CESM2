@@ -10,6 +10,8 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--project_path", type=str)
 parser.add_argument("--experiment_identifiers", nargs='+', default=[f"c{i}" for i in range(1,6)] + [f"p{i}" for i in range(1,6)] + ['c1_initial', 'p1_initial'])
+parser.add_argument("--variable_name_in_filename", type=str)
+parser.add_argument("--variable_name_in_file", type=str)
 parser.add_argument("--overwrite", action='store_true')
 command_line_arguments = parser.parse_args()
 
@@ -33,7 +35,7 @@ for experiment_identifier in command_line_arguments.experiment_identifiers:
     out_dir = '/'.join([exp.dir_work] + [v for k,v in naming_d.items()])
     os.makedirs(out_dir, exist_ok=True)
 
-    obs = xr.open_mfdataset(f"{exp.dir_work}/REA_output/{exp.product_name}/NCAR/CESM2/{exp.initial_conditions_name}-x{exp_new_name}/day/atmos/tas-reg/*/*", concat_dim='sim', combine='nested')['tas'].load()
+    obs = xr.open_mfdataset(f"{exp.dir_work}/REA_output/{exp.product_name}/NCAR/CESM2/{exp.initial_conditions_name}-x{exp_new_name}/meta/obs/*/*", concat_dim='sim', combine='nested')['obs'].load()
 
     ens = ensemble_GKLT(exp)
     ens.evaluate_weights_and_probabilities(obs)

@@ -13,6 +13,7 @@ realm_dict = {
 }
 
 variable_dict = {
+    'obs' : 'obs',
     'TREFHT' : 'tas',
     'RHREFHT' : 'rhs',
     'U200' : 'ua200',
@@ -122,6 +123,10 @@ def extract(
 
     if variable in ['ICEFRAC']:
         naming_d['realm'] = 'seaIce'
+
+    if variable == 'obs':
+        naming_d['time_frequency'] = ''
+        naming_d['realm'] = 'meta'
 
     if end_step is None:
         end_step = exp.n_steps
