@@ -37,7 +37,8 @@ def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_ste
         h_files = glob.glob(f"{exp.dir_archive_post}/step{step}/{exp.experiment_identifier}_{sim_identifier_in_step}/{realm}/hist/*{h_identifier}*.nc")
         if len(h_files) == 1:
             with xr.open_mfdataset(h_files[0]) as nc:
-                nc = preprocessor(nc, variable)
+                if preprocessor is not None:
+                    nc = preprocessor(nc, variable)
                 l.append(nc[variable])
     if len(l) == end_step:
         x = xr.concat(l, dim='time')
@@ -52,7 +53,8 @@ def open_rea_legacy(exp, sim_name, realm, h_identifier, variable, preprocessor, 
         h_files = glob.glob(f"{exp.dir_archive_post}/{_sim_name_of_step_}/{realm}/hist/*{h_identifier}*.nc")
         if len(h_files) == 1:
             with xr.open_mfdataset(h_files[0]) as nc:
-                nc = preprocessor(nc, variable)
+                if preprocessor is not None:
+                    nc = preprocessor(nc, variable)
                 l.append(nc[variable])
 
     if len(l) == end_step:
@@ -65,7 +67,8 @@ def open_initial(exp, sim_name, realm, h_identifier, variable, preprocessor):
     h_files = glob.glob(f"{archive_fldr}/{realm}/hist/*{h_identifier}*.nc")
 
     with xr.open_mfdataset(h_files) as nc:
-        nc = preprocessor(nc, variable)
+        if preprocessor is not None:
+            nc = preprocessor(nc, variable)
         return nc[variable], nc.attrs
 
 def open_initial_before(exp, sim_name, realm, h_identifier, variable, preprocessor):
@@ -78,9 +81,9 @@ def open_initial_before(exp, sim_name, realm, h_identifier, variable, preprocess
         initial_year = int(initial_archive.split('/')[-1][:4])
 
     h_files = glob.glob(f"{initial_before_archive}/atm/hist/*{h_identifier}.{initial_year}*")
-    print(h_files)
     with xr.open_mfdataset(h_files) as nc:
-        nc = preprocessor(nc, variable)
+        if preprocessor is not None:
+            nc = preprocessor(nc, variable)
         i_first_day = nc.time.loc[:f"{str(nc.time.dt.year.values[0]).zfill(4)}-{exp.start_date_in_year}"].shape[0]+1
         return nc[variable][:i_first_day], nc.attrs
 
