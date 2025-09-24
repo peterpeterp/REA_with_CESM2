@@ -66,12 +66,12 @@ class ensemble_GKLT(ensemble):
 
             self._sim_names = []
             for i in todo_tables[step].index:
-                sim_name = self._exp.experiment_identifier + '.'
-                sim_name += todo_tables[steps[-1]].loc[i, 'case_identifier'].split('_')[-1]
+                step_names = [ todo_tables[steps[-1]].loc[i, 'case_identifier'].split('_')[-1] ]
                 parent_name = todo_tables[steps[-1]].loc[i, 'parent_identifier']
                 for step in steps[::-1][1:]:
-                    sim_name += '.' + todo_tables[step].loc[todo_tables[step].case_identifier == parent_name, 'case_identifier'].values[0].split('_')[-1]
+                    step_names += [ todo_tables[step].loc[todo_tables[step].case_identifier == parent_name, 'case_identifier'].values[0].split('_')[-1] ]
                     parent_name = todo_tables[step].loc[todo_tables[step].case_identifier == parent_name, 'parent_identifier'].values[0]
+                sim_name = '.'.join([ self._exp.experiment_identifier ] + step_names[::-1])
                 self._sim_names.append(sim_name)
             self._sim_names = np.array(self._sim_names)
             with open(file_name, 'w') as fl:

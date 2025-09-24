@@ -15,6 +15,7 @@ realm_dict = {
 variable_dict = {
     'obs' : 'obs',
     'TREFHT' : 'tas',
+    'TREFHTMX' : 'tasmax',
     'RHREFHT' : 'rhs',
     'U200' : 'ua200',
     'U500' : 'ua500',
@@ -25,6 +26,9 @@ variable_dict = {
     'ICEFRAC' : 'sic',
     'SOILWATER_10CM' : 'mrsos',
     'NEP' : 'nep',
+    'GPP' : 'gpp',
+    'HR' : 'hr',
+    'AR' : 'ar',
     'pr' : 'pr',
     'LHFLX' : 'hfls',
     'SHFLX' : 'hfss',
@@ -148,6 +152,7 @@ def extract(
         exp_new_name = ''.join(exp.experiment_identifier.split('_')[0][1:])
         naming_d['experiment'] = f"{exp.initial_conditions_name}-x{exp_new_name}"
         ens = ensemble_GKLT(exp)
+        ens.get_sim_names(overwrite=True)
         trajectory_names = ens._sim_names
     else:
         assert False, 'need ensemble_type'

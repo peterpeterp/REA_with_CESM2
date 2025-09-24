@@ -38,8 +38,8 @@ for experiment_identifier in command_line_arguments.experiment_identifiers:
     obs = xr.open_mfdataset(f"{exp.dir_work}/REA_output/{exp.product_name}/NCAR/CESM2/{exp.initial_conditions_name}-x{exp_new_name}/meta/obs/*/*", concat_dim='sim', combine='nested')['obs'].load()
 
     ens = ensemble_GKLT(exp)
+    ens.get_sim_names(overwrite=True)
     ens.evaluate_weights_and_probabilities(obs)
-    print(ens._prob)
-    print(ens._weight_from_algo)
+
     xr.Dataset({'probability':ens._prob}).to_netcdf(f"{out_dir}/probability_season_{naming_d['experiment']}.nc")
     xr.Dataset({'weight':ens._weight_from_algo}).to_netcdf(f"{out_dir}/weight_season_{naming_d['experiment']}.nc")
