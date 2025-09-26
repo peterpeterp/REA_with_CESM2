@@ -56,7 +56,7 @@ class launch_handler():
         # if none of the previous conditions met the job can be launched
         return 'not launched'
 
-    def generate_launch_command(self, todo):
+    def generate_launch_command_direct(self, todo):
         '''
         Parameters:
             todo (pd.Dataframe row): a row from a todo-table
@@ -65,6 +65,42 @@ class launch_handler():
             command (str)
         '''
         return f"python {self._exp.launching_script} " + " ".join([f"--{k} {v}" for k,v in todo.to_dict().items() if v != ""])
+
+    def generate_launch_command(self, todo):
+        '''
+        Parameters:
+            todo (pd.Dataframe row): a row from a todo-table
+
+        Returns:
+            command (str)
+        '''
+        job_file_path = f"job_files/" + todo.to_dict()['case_path']
+        os.system(f"mkdir -p {job_file_path}")
+        job_file = job_file_path + '/' + todo.to_dict()['case_identifier']
+
+        with open(job_file, 'w') as new_job_file:
+            new_job_file.write(f'''#!/bin/bash
+#SBATCH --job-name=sim_launcher      # Specify job name
+#SBATCH --partition=compute     # Specify partition name
+#SBATCH --ntasks=1             # Specify max. number of tasks to be invoked
+#SBATCH --cpus-per-task=1     # Specify number of CPUs per task
+#SBATCH --time=00:20:00        # Set a limit on the total run time
+#SBATCH --account={self._exp.dkrz_project_for_accounting}       # Charge resources on this project account
+#SBATCH --output=job_files/log/%j    # File name for standard output
+#SBATCH --error=job_files/log/%j    # File name for standard error output
+
+module purge
+module load subversion python3/2022.01-gcc-11.2.0 esmf/8.2.0-intel-2021.5.0
+module load esmf/8.2.0-intel-2021.5.0 gcc intel-oneapi-compilers/2022.0.1-gcc-11.2.0 intel-oneapi-mkl/2022.0.1-gcc-11.2.0
+module load openmpi/4.1.2-intel-2021.5.0
+module load cdo nco python3/2022.01-gcc-11.2.0
+module load nano emacs ncview tree
+''')
+            new_job_file.write(f"python {self._exp.launching_script} " + " ".join([f"--{k} {v}" for k,v in todo.to_dict().items() if v != ""]))
+
+
+        return f"sbatch {job_file}"
+
 
     def treat_todo(self, todo):
         status = self.check_status_of_todo(todo)
@@ -339,7 +375,7 @@ class launch_handler():
 
             new_slurm_job += sbatch_modules
 
-            new_slurm_job += f"{self._exp..python_environment_path} main_launcher.py --experiment {self._exp.experiment_identifier}"
+            new_slurm_job += f"{self._exp.python_environment_path} main_launcher.py --experiment {self._exp.experiment_identifier}"
             for cmd_line_argument in ['verbose','dry_run','relaunch_cases_which_are_unclear', 'relaunch_after_completion']:
                 if self.__dict__[f"_{cmd_line_argument}"]:
                     new_slurm_job += f" --{cmd_line_argument}"
