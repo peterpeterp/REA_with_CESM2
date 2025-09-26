@@ -339,7 +339,7 @@ class launch_handler():
 
             new_slurm_job += sbatch_modules
 
-            new_slurm_job += f"python main_launcher.py --experiment {self._exp.experiment_identifier}"
+            new_slurm_job += f"{self._exp..python_environment_path} main_launcher.py --experiment {self._exp.experiment_identifier}"
             for cmd_line_argument in ['verbose','dry_run','relaunch_cases_which_are_unclear', 'relaunch_after_completion']:
                 if self.__dict__[f"_{cmd_line_argument}"]:
                     new_slurm_job += f" --{cmd_line_argument}"
