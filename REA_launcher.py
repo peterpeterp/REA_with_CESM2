@@ -275,7 +275,7 @@ module load nano emacs ncview tree
 
 
         # go backwards from last step
-        for step in range(self._exp.n_steps, -1, -1):
+        for step in range(self._exp.n_steps -1, -1, -1):
             # check if previous step has been started
             previous_todo_csv = f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step-1}.csv"
             if os.path.isfile(previous_todo_csv):

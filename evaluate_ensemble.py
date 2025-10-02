@@ -10,8 +10,8 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument("--project_path", type=str)
 parser.add_argument("--experiment_identifiers", nargs='+', default=[f"c{i}" for i in range(1,6)] + [f"p{i}" for i in range(1,6)] + ['c1_initial', 'p1_initial'])
-parser.add_argument("--variable_name_in_filename", type=str)
-parser.add_argument("--variable_name_in_file", type=str)
+#parser.add_argument("--variable_name_in_filename", type=str)
+#parser.add_argument("--variable_name_in_file", type=str)
 parser.add_argument("--overwrite", action='store_true')
 command_line_arguments = parser.parse_args()
 

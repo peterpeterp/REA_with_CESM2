@@ -46,7 +46,7 @@ class ensemble_GKLT(ensemble):
         # Ris
         self._mean_scores = np.array([
             pd.read_table(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}_evaluation.csv", sep=',')['score'].values.mean()
-            for step in range(self._exp.n_steps)
+            for step in range(self._exp.n_steps-1)
         ])
 
     ###################################
@@ -127,7 +127,7 @@ class ensemble_GKLT(ensemble):
         self._weight_from_algo = self._obs.mean('time').copy() * np.nan
         self._weight_from_algo[:] = np.array(
             [
-                np.product(self._mean_scores[:-1]) / (np.product(self._scores[i,:-1]) * self._exp.n_members)
+                np.product(self._mean_scores) / (np.product(self._scores[i,:-1]) * self._exp.n_members)
                 for i in range(self._exp.n_members)
             ]
         )
