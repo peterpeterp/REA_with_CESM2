@@ -200,9 +200,7 @@ module load nano emacs ncview tree
             evaluation_table.loc[i, 'score'] = self._exp.calc_score(obs)
         # calculate weights
         evaluation_table['weight'] = evaluation_table['score'] / np.mean(evaluation_table['score'])
-        # normalize weights
-        # I think this is useless
-        # evaluation_table['weight'] = evaluation_table['weight'] / evaluation_table['weight'].mean()
+
         return evaluation_table
 
     def create_list_of_clones(self, step, evaluation_table):
@@ -272,8 +270,6 @@ module load nano emacs ncview tree
         return todo_table
 
     def do_what_has_to_be_done(self):
-
-
         # go backwards from last step
         for step in range(self._exp.n_steps -1, -1, -1):
             # check if previous step has been started
