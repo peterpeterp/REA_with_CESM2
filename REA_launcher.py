@@ -201,6 +201,9 @@ module load nano emacs ncview tree
         # calculate weights
         evaluation_table['weight'] = evaluation_table['score'] / np.mean(evaluation_table['score'])
 
+        # store evaluation
+        evaluation_table.to_csv(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step-1}_evaluation.csv")
+        
         return evaluation_table
 
     def create_list_of_clones(self, step, evaluation_table):
@@ -208,9 +211,6 @@ module load nano emacs ncview tree
         np.random.seed(self._exp.seed + step)
         # get number of copies
         evaluation_table['copies'] = ( evaluation_table['weight'] + np.random.uniform( low=0 , high=1 , size=self._exp.n_members )).astype(int)
-
-        # store evaluation
-        evaluation_table.to_csv(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step-1}_evaluation.csv")
 
         # make a todo-list with clones of indices of the previous_todos
         clones_of = np.zeros( np.sum(evaluation_table['copies'].values) , dtype=int )
