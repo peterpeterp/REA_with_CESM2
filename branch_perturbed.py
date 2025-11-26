@@ -82,8 +82,9 @@ if args.startdate is None:
 ############################
 
 if args.overwrite:
-    if os.path.isdir(f"{dir_scripts}/{args.case_path}/{args.case_identifier}"):
-        run(f"rm -rf {dir_scripts}/{args.case_path}/{args.case_identifier}")
+    for directory in [dir_scripts, dir_run, dir_archive]:
+        if os.path.isdir(f"{directory}/{args.case_path}/{args.case_identifier}"):
+            run(f"rm -rf {directory}/{args.case_path}/{args.case_identifier}")
 
 ##############
 # Setup Case #

@@ -236,8 +236,7 @@ module load nano emacs ncview tree
             additional = np.random.choice(clones_of, size=-delta_N , replace=False )
             clones_of = np.append(clones_of, additional)
 
-
-        return clones_of
+        return clones_of, np.array([evaluation_table.case_identifier[i] for i in clones_of])
 
     def prepare_todos_for_step_X(self, step):
         ##############################################
@@ -248,7 +247,7 @@ module load nano emacs ncview tree
 
         evaluation_table = self.evaluate_previous_step(step)
 
-        clones_of = self.create_list_of_clones(step, evaluation_table)
+        clones_of,_ = self.create_list_of_clones(step, evaluation_table)
 
         # make list of simulations to launch
         l = []
