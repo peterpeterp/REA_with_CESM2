@@ -60,9 +60,13 @@ class ensemble_GKLT(ensemble):
             todo_tables = {}
             steps = np.arange(0,self._exp.n_steps,1,'int')
             for step in steps:
-                todo_tables[step] = pd.read_table(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}.csv", sep=',')
-                todo_tables[step]['parent_identifier'] = [p.split('/')[-1] for p in todo_tables[step]['parent_path']]
-
+                # HACK because of renaming with the eke and future simulation hacks
+                try:
+                    todo_tables[step] = pd.read_table(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}.csv", sep=',')
+                    todo_tables[step]['parent_identifier'] = [p.split('/')[-1] for p in todo_tables[step]['parent_path']]
+                except:
+                    todo_tables[step] = pd.read_table(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/todo_step{step}.csv", sep=',')
+                    todo_tables[step]['parent_identifier'] = [p.split('/')[-1] for p in todo_tables[step]['parent_path']]
 
             self._sim_names = []
             for i in todo_tables[step].index:
