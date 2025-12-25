@@ -268,96 +268,124 @@ module load nano emacs ncview tree
         todo_table['precompiled_path'] = previous_todos.loc[1, 'precompiled_path']
         return todo_table
 
+    def check_step(self, step):
+        # check if previous step is completed
+        todo_csv = f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}.csv"
+        todos = pd.read_csv(todo_csv, index_col=0, keep_default_na=False)
+        status_l = np.array(['']*self._exp.n_members, dtype='<U20')
+        todos=todos.reindex(columns=[todos.columns[-1]] + list(todos.columns[:-1]))
+        for i in todos.index:
+            status_l[i] = self.check_status_of_todo(todos.loc[i])
+
+        if np.all(status_l == 'done'):
+            print(f"step{step} is done")
+            return 'done'
+
+        elif np.any(status_l == 'not launched'):                
+            print(f"launching remaining simulations for step{step}")
+            print(f"to be launched: {', '.join(todos.loc[status_l == 'not launched', 'case_identifier'].values)}")
+            for i in todos.index:
+                self.treat_todo(todos.loc[i])
+            return 'launching'
+
+        elif np.all((status_l == 'done') | (status_l == 'running')):
+            print(f"waiting for step{step}")
+            print(f"still running: {', '.join(todos.loc[status_l == 'running', 'case_identifier'].values)}")
+            return 'weighting'
+
+        else:
+            print('-'*10 + ' overview ' + '-'*10)
+            for status_type in ['running', 'unclear', 'not launched']:
+                print(f"{status_type}: {', '.join(todos.loc[status_l == status_type, 'case_identifier'].values)}")
+            
+            print('-'*10 + ' logs ' + '-'*10)
+            for status_type in ['unclear']:
+                log_files = []
+                for i in np.where(status_l == status_type)[0]:
+                    case_status = f"{todos.iloc[i].loc['case_path']}/{todos.iloc[i].loc['case_identifier']}/CaseStatus"
+                    print(case_status)
+                    log = open(f"{self._exp.dir_scripts}/{case_status}", "r").read().split("\n")
+                    important_lines = [l for l in log if "See log file for details: /scratch/u/u290372/" in l]
+                    if len(important_lines) >= 1:
+                        scratch_log = important_lines[-1].split(' ')[-1]
+                        self.run(f"cp {scratch_log} {self._exp.dir_out}/logs_of_fails/{scratch_log.split('/')[-1]}")
+
+            print('-'*10 + ' launch commands ' + '-'*10)
+            for status_type in ['unclear', 'not launched']:
+                for i in np.where(status_l == status_type)[0]:
+                    print(self.generate_launch_command(todos.iloc[i], overwrite=True))
+                    if self._relaunch_cases_which_are_unclear:
+                        self.run(self.generate_launch_command(todos.iloc[i], overwrite=True))
+
+
+            if self._relaunch_cases_which_are_unclear == False:
+                print('needs a fix')
+                exit(0)
+            else:
+                return 'relaunching'      
+
     def do_what_has_to_be_done(self):
+        # check if some jobs related to this ensemble are in the queue
+        my_jobs = subprocess.check_output(["squeue", '--me', '--format="%.18i %.70j %.8T %.10M"']).decode().split('\n')
+        if len([l for l in my_jobs if f"{self._exp.experiment_identifier}_*_{self._exp.product_name}" in l]) > 0:
+            print('still launch jobs in the queue')
+            print('need to weight')
+            return "weighting"
+
         # go backwards from last step
         for step in range(self._exp.n_steps -1, -1, -1):
             # check if previous step has been started
-            previous_todo_csv = f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step-1}.csv"
-            if os.path.isfile(previous_todo_csv):
+            if os.path.isfile(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}.csv"):
+                print(f'final todo table for step{step} exists')
                 break
-        print(f"current step {step}")
+        print(f"checking status of step{step}")
 
         if step == 0:
-            todo_table = self.prepare_todos_for_step_0()
-            # launch simulations
-            for i in todo_table.index:
-                self.treat_todo(todo_table.loc[i])
-            todo_table.to_csv(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}.csv")
-            print(f"working on step {step}")
-
-        else:
-            # check if some jobs related to this ensemble are in the queue
-            my_jobs = subprocess.check_output(["squeue", '--me', '--format="%.18i %.70j %.8T %.10M"']).decode().split('\n')
-            if len([l for l in my_jobs if f"{self._exp.experiment_identifier}_*_{self._exp.product_name}" in l]) > 0:
-                print('still jobs in the queue')
-                print('need to weight')
-
+            todo_table_0_csv = f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}.csv"
+            if os.path.isfile(todo_table_0_csv) == False:
+                todo_table = self.prepare_todos_for_step_0()
             else:
-                # check if previous step is completed
-                previous_todos = pd.read_csv(previous_todo_csv, index_col=0, keep_default_na=False)
-                status_l = np.array(['']*self._exp.n_members, dtype='<U20')
-                previous_todos=previous_todos.reindex(columns=[previous_todos.columns[-1]] + list(previous_todos.columns[:-1]))
-                for i in previous_todos.index:
-                    status_l[i] = self.check_status_of_todo(previous_todos.loc[i])
+                todo_table = pd.read_csv(todo_table_0_csv, index_col=0)
 
-                if np.all(status_l == 'done'):
-                    print(f"step {step} is done")
-                    print(f"cleaning run directories of {step -1}")
-                    self.clean_run_directories_of_step_X(step - 1)
-                    print(f"deleting restart files of {step - 3}")
-                    self.delete_restart_files_of_step_X(step - 3)
-                    print(f"need to do step {step}")
-                    todo_table = self.prepare_todos_for_step_X(step)
-                    todo_table.to_csv(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}.csv")
+            # simulate first run first as it is required as a precompiled run
+            status_of_first = self.check_status_of_todo(todo_table.loc[0])
+            if status_of_first != 'done':
+                print('first simulation is not done yet')
+                print('doing the first simulation alone as it is required as precompiled path')
+                self.treat_todo(todo_table.loc[0])
 
+            if status_of_first == 'done':
+                # launch all other simulations
+                status = self.check_step(0, '')
+                if status == 'done':
+                    todo_table = self.prepare_todos_for_step_X(step + 1)
                     # launch simulations
+                    print(f"launching step{step + 1}")
                     for i in todo_table.index:
                         self.treat_todo(todo_table.loc[i])
-                    print(f"working on step {step}")
-
-                elif np.any(status_l == 'not launched'):                
-                    print(f"launching remaining simulations for step {step}")
-                    print(f"to be launched: {', '.join(previous_todos.loc[status_l == 'not launched', 'case_identifier'].values)}")
-                    for i in previous_todos.index:
-                        self.treat_todo(previous_todos.loc[i])
-
-                elif np.all((status_l == 'done') | (status_l == 'running')):
-                    print(f"waiting for step {step}")
-                    print(f"still running: {', '.join(previous_todos.loc[status_l == 'running', 'case_identifier'].values)}")
-                    pass
-
-                else:
-                    print('-'*10 + ' overview ' + '-'*10)
-                    for status_type in ['running', 'unclear', 'not launched']:
-                        print(f"{status_type}: {', '.join(previous_todos.loc[status_l == status_type, 'case_identifier'].values)}")
-
                     
-                    print('-'*10 + ' logs ' + '-'*10)
-                    for status_type in ['unclear']:
-                        log_files = []
-                        for i in np.where(status_l == status_type)[0]:
-                            case_status = f"{previous_todos.iloc[i].loc['case_path']}/{previous_todos.iloc[i].loc['case_identifier']}/CaseStatus"
-                            print(case_status)
-                            log = open(f"{self._exp.dir_scripts}/{case_status}", "r").read().split("\n")
-                            important_lines = [l for l in log if "See log file for details: /scratch/u/u290372/" in l]
-                            if len(important_lines) >= 1:
-                                scratch_log = important_lines[-1].split(' ')[-1]
-                                self.run(f"cp {scratch_log} {self._exp.dir_out}/logs_of_fails/{scratch_log.split('/')[-1]}")
+                    print(f"cleaning run directories of step{step -1}")
+                    self.clean_run_directories_of_step_X(step - 1)
+                    print(f"deleting restart files of step{step - 3}")
+                    self.delete_restart_files_of_step_X(step - 3)
 
-                    print('-'*10 + ' launch commands ' + '-'*10)
-                    for status_type in ['unclear', 'not launched']:
-                        for i in np.where(status_l == status_type)[0]:
-                            print(self.generate_launch_command(previous_todos.iloc[i], overwrite=True))
-                            if self._relaunch_cases_which_are_unclear:
-                                self.run(self.generate_launch_command(previous_todos.iloc[i], overwrite=True))
+        else:
+            status = self.check_step(step)
+            if status == 'done':
+                print(f"working on step{step + 1}")
+                todo_table = self.prepare_todos_for_step_X(step + 1)
+                # launch simulations
+                print(f"launching step{step + 1}")
+                for i in todo_table.index:
+                    self.treat_todo(todo_table.loc[i])
 
-
-                    if self._relaunch_cases_which_are_unclear == False:
-                        print('needs a fix')
-                        exit(0)          
-
+                print(f"cleaning run directories of step{step -1}")
+                self.clean_run_directories_of_step_X(step - 1)
+                print(f"deleting restart files of step{step - 3}")
+                self.delete_restart_files_of_step_X(step - 3)
+    
         if self._relaunch_after_completion:
-            self.resubmit_after_completion_of_previous_runs(step + 1)
+            self.resubmit_after_completion_of_previous_runs(step)
 
 
     def resubmit_after_completion_of_previous_runs(self, step):
