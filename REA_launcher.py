@@ -108,6 +108,7 @@ module load nano emacs ncview tree
     def treat_todo(self, todo):
         status = self.check_status_of_todo(todo)
         if status == 'not launched':
+            print(status)
             self.run(self.generate_launch_command(todo))
 
     # run and print or just print or just run depending on command line parameters
@@ -181,13 +182,14 @@ module load nano emacs ncview tree
         precompiled_name = f"GKLT/{self._exp.experiment_name}/step0/{todo_table.loc[0,'case_identifier']}"
         todo_table['precompiled_path'] = precompiled_name
         todo_table.loc[0, 'precompiled_path'] = ""
+        todo_table.to_csv(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/todo_step0.csv")
         return todo_table
 
     def evaluate_previous_step(self, step):
         ##########################
         # evaluate previous step #
         ##########################
-        previous_todos = pd.read_csv(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step-1}.csv", index_col=0, keep_default_na=False)
+        previous_todos = pd.read_csv(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/todo_step{step-1}.csv", index_col=0, keep_default_na=False)
 
         # get identifiers from previous step
         evaluation_table = previous_todos.loc[:,["case_identifier"]]
@@ -243,7 +245,7 @@ module load nano emacs ncview tree
         # create a list of clone-todos for this step #
         ##############################################
 
-        previous_todos = pd.read_csv(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step-1}.csv", index_col=0, keep_default_na=False)
+        previous_todos = pd.read_csv(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/todo_step{step-1}.csv", index_col=0, keep_default_na=False)
 
         evaluation_table = self.evaluate_previous_step(step)
 
@@ -266,11 +268,12 @@ module load nano emacs ncview tree
         todo_table = pd.DataFrame(l)
         # reuse the same compilation
         todo_table['precompiled_path'] = previous_todos.loc[1, 'precompiled_path']
+        todo_table.to_csv(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/todo_step{step}.csv")
         return todo_table
 
     def check_step(self, step):
         # check if previous step is completed
-        todo_csv = f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}.csv"
+        todo_csv = f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/todo_step{step}.csv"
         todos = pd.read_csv(todo_csv, index_col=0, keep_default_na=False)
         status_l = np.array(['']*self._exp.n_members, dtype='<U20')
         todos=todos.reindex(columns=[todos.columns[-1]] + list(todos.columns[:-1]))
@@ -335,13 +338,13 @@ module load nano emacs ncview tree
         # go backwards from last step
         for step in range(self._exp.n_steps -1, -1, -1):
             # check if previous step has been started
-            if os.path.isfile(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}.csv"):
+            if os.path.isfile(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/todo_step{step}.csv"):
                 print(f'final todo table for step{step} exists')
                 break
         print(f"checking status of step{step}")
 
         if step == 0:
-            todo_table_0_csv = f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}.csv"
+            todo_table_0_csv = f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/todo_step{step}.csv"
             if os.path.isfile(todo_table_0_csv) == False:
                 todo_table = self.prepare_todos_for_step_0()
             else:
@@ -356,7 +359,7 @@ module load nano emacs ncview tree
 
             if status_of_first == 'done':
                 # launch all other simulations
-                status = self.check_step(0, '')
+                status = self.check_step(0)
                 if status == 'done':
                     todo_table = self.prepare_todos_for_step_X(step + 1)
                     # launch simulations
