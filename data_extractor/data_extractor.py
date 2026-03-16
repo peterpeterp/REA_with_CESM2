@@ -84,8 +84,10 @@ def open_initial_before(exp, sim_name, realm, h_identifier, variable, preprocess
         initial_before_archive = initial_archive.split('/branch/')[0]
         initial_year = initial_archive.split('/')[-1][:4]
     else:
-        initial_before_archive = '/'.join(initial_archive.split('/')[:-1])
         initial_year = int(initial_archive.split('/')[-1][:4])
+        initial_before_archive = '/'.join(initial_archive.split('/')[:-1]) + f"/{initial_year}-01-01_to_{initial_year}-{exp.start_date_in_year}"
+
+    print(initial_before_archive, initial_year)
 
     h_files = glob.glob(f"{initial_before_archive}/atm/hist/*{h_identifier}.{initial_year}*")
     with xr.open_mfdataset(h_files) as nc:

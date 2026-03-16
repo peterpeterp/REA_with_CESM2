@@ -160,6 +160,11 @@ module load nano emacs ncview tree
         for rest_directory in rest_directories:
             self.run(f"rm -rf {rest_directory}")
 
+    def initial_condition_dict(self):
+        # make list of simulations to launch
+        
+        print(d)
+
     def prepare_todos_for_step_0(self):
         ##############
         # first step #
