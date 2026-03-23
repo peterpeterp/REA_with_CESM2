@@ -17,6 +17,7 @@ variable_dict = {
     'TREFHT' : 'tas',
     'TREFHTMX' : 'tasmax',
     'RHREFHT' : 'rhs',
+    'U10' : 'sfcWind',
     'U200' : 'ua200',
     'U500' : 'ua500',
     'U850' : 'ua850',
@@ -41,7 +42,7 @@ def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_ste
     l = []
     for step,sim_identifier_in_step in enumerate(sim_name.split('.')[1:]):
         if preprocessor is not None:
-            nc = preprocessor(f"{exp.dir_archive_post}/step{step}/{exp.experiment_identifier}_{sim_identifier_in_step}")
+            nc = preprocessor(f"{exp.dir_archive_post}/step{step}/{exp.experiment_identifier}_{sim_identifier_in_step}", realm, h_identifier, variable)
             l.append(nc[variable])
         if preprocessor is None:
             h_files = glob.glob(f"{exp.dir_archive_post}/step{step}/{exp.experiment_identifier}_{sim_identifier_in_step}/{realm}/hist/*{h_identifier}*.nc")
@@ -63,7 +64,7 @@ def open_rea_legacy(exp, sim_name, realm, h_identifier, variable, preprocessor, 
     for step in range(1,end_step+1):
         _sim_name_of_step_ = '/'.join(sim_name.split('/')[:step])
         if preprocessor is not None:
-            nc = preprocessor(f"{exp.dir_archive_post}/{_sim_name_of_step_}")
+            nc = preprocessor(f"{exp.dir_archive_post}/{_sim_name_of_step_}", realm, h_identifier, variable)
             l.append(nc[variable])            
         if preprocessor is None:
             h_files = glob.glob(f"{exp.dir_archive_post}/{_sim_name_of_step_}/{realm}/hist/*{h_identifier}*.nc")
@@ -84,7 +85,7 @@ def open_initial(exp, sim_name, realm, h_identifier, variable, preprocessor):
     archive_fldr = f"{exp.dir_archive}/GKLT/initial_{exp.initial_conditions_name}_{exp.start_date_in_year}/{sim_name}"
 
     if preprocessor is not None:
-        nc = preprocessor(f"{exp.dir_archive_post}/step{step}/{exp.experiment_identifier}_{sim_identifier_in_step}")
+        nc = preprocessor(f"{exp.dir_archive_post}/step{step}/{exp.experiment_identifier}_{sim_identifier_in_step}", realm, h_identifier, variable)
         with xr.open_mfdataset(h_files) as nc:
             x = nc[variable]
 
@@ -109,7 +110,7 @@ def open_initial_before(exp, sim_name, realm, h_identifier, variable, preprocess
         initial_before_archive = '/'.join(initial_archive.split('/')[:-1]) + f"/{initial_year}-01-01_to_{initial_year}-{exp.start_date_in_year}"
 
     if preprocessor is not None:
-        nc = preprocessor(f"{initial_before_archive}")
+        nc = preprocessor(f"{initial_before_archive}", realm, h_identifier, variable)
         with xr.open_mfdataset(h_files) as nc:
             i_first_day = nc.time.loc[:f"{str(nc.time.dt.year.values[0]).zfill(4)}-{exp.start_date_in_year}"].shape[0]+1
             x = nc[variable][:i_first_day]
@@ -117,8 +118,6 @@ def open_initial_before(exp, sim_name, realm, h_identifier, variable, preprocess
     if preprocessor is None:
         h_files = glob.glob(f"{initial_before_archive}/{realm}/hist/*{h_identifier}.{initial_year}*")
         with xr.open_mfdataset(h_files) as nc:
-            if preprocessor is not None:
-                nc = preprocessor(nc, variable)
             i_first_day = nc.time.loc[:f"{str(nc.time.dt.year.values[0]).zfill(4)}-{exp.start_date_in_year}"].shape[0]+1
             x = nc[variable][:i_first_day]
         
