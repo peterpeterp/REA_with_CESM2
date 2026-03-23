@@ -37,7 +37,7 @@ class simulation_tree(simulationBase, NodeMixin):  # Add Node feature
         else:
             self.parent = None
 
-class ensemble_GKLT(ensemble):
+class ensemble_GKLT_legacy(ensemble):
     def __init__(self, exp):
         self._name = exp.experiment_name
         super().__init__(exp)
@@ -55,11 +55,14 @@ class ensemble_GKLT(ensemble):
     # build a forest                  #
     ###################################
 
-    def get_sim_names(self, overwrite=False):
-        file_name = f"{self._exp.dir_out}/sim_names.txt"
+    def get_sim_names(self, end_step=None, overwrite=False):
+        if end_step is None:
+            end_step = self._exp.n_steps
+        file_name = f"{self._exp.dir_out}/sim_names-step{end_step}.txt"
+
         if os.path.isfile(file_name) == False or overwrite:
             self._sim_names = []
-            for step in range(self._exp.n_steps):
+            for step in range(end_step):
                 sim_paths = sorted([p for p in glob.glob(f"{self._exp.dir_archive_post}/*/{'/*'*step}/atm")])
                 self._sim_names += [p.replace(f"{self._exp.dir_archive_post}/","").replace('/atm','') for p in sim_paths]
 

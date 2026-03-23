@@ -5,7 +5,7 @@ import numpy as np
 sys.path.append('../')
 
 from ensembles.ensemble_GKLT import ensemble_GKLT
-
+from ensembles.ensemble_GKLT_legacy import ensemble_GKLT_legacy
 
 realm_dict = {
     'atm' : 'atmos',
@@ -38,7 +38,7 @@ variable_dict = {
 }
 
 
-def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_step=None):
+def open_rea_ooold(exp, sim_name, realm, h_identifier, variable, preprocessor, end_step=None):
     l = []
     for step,sim_identifier_in_step in enumerate(sim_name.split('.')[1:]):
         h_files = glob.glob(f"{exp.dir_archive_post}/step{step}/{exp.experiment_identifier}_{sim_identifier_in_step}/{realm}/hist/*{h_identifier}*.nc")
@@ -47,6 +47,22 @@ def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_ste
                 if preprocessor is not None:
                     nc = preprocessor(nc, variable)
                 l.append(nc[variable])
+    if len(l) == end_step:
+        x = xr.concat(l, dim='time')
+        
+    return x, nc.attrs
+
+def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_step=None):
+    l = []
+    for step,sim_identifier_in_step in enumerate(sim_name.split('.')[1:]):
+        if preprocessor is not None:
+            nc = preprocessor(f"{exp.dir_archive_post}/step{step}/{exp.experiment_identifier}_{sim_identifier_in_step}")
+            l.append(nc[variable])
+        if preprocessor is None:
+            h_files = glob.glob(f"{exp.dir_archive_post}/step{step}/{exp.experiment_identifier}_{sim_identifier_in_step}/{realm}/hist/*{h_identifier}*.nc")
+            if len(h_files) == 1:
+                with xr.open_mfdataset(h_files[0]) as nc:
+                    l.append(nc[variable])
     if len(l) == end_step:
         x = xr.concat(l, dim='time')
         
@@ -87,9 +103,7 @@ def open_initial_before(exp, sim_name, realm, h_identifier, variable, preprocess
         initial_year = int(initial_archive.split('/')[-1][:4])
         initial_before_archive = '/'.join(initial_archive.split('/')[:-1]) + f"/{initial_year}-01-01_to_{initial_year}-{exp.start_date_in_year}"
 
-    print(initial_before_archive, initial_year)
-
-    h_files = glob.glob(f"{initial_before_archive}/atm/hist/*{h_identifier}.{initial_year}*")
+    h_files = glob.glob(f"{initial_before_archive}/{realm}/hist/*{h_identifier}.{initial_year}*")
     with xr.open_mfdataset(h_files) as nc:
         if preprocessor is not None:
             nc = preprocessor(nc, variable)
@@ -140,38 +154,36 @@ def extract(
         naming_d['time_frequency'] = ''
         naming_d['realm'] = 'meta'
 
-    if end_step is None:
-        end_step = exp.n_steps
-    else:
-        naming_d['experiment'] += f"-step{end_step}"
-
     if exp.ensemble_type == 'initial' or exp.ensemble_type == 'before':
         naming_d['experiment'] = f"{exp.initial_conditions_name}-initial"
         trajectory_names = [ini.split('.')[-4] + '_' + ini.split('/')[-1].split('-')[0] for ini in exp.initial_conditions]
     elif exp.ensemble_type == 'rea_legacy':
         exp_new_name = ''.join(exp.experiment_identifier.split('_')[0][1:])
         naming_d['experiment'] = f"{exp.initial_conditions_name}-x{exp_new_name}"
-        ens = ensemble_GKLT(exp)
+        ens = ensemble_GKLT_legacy(exp)
+        ens.get_sim_names(end_step=end_step, overwrite=False)
         trajectory_names = sorted([s for s in ens._sim_names if len(s.split('/')) == end_step])
     elif exp.ensemble_type == 'rea':
         exp_new_name = ''.join(exp.experiment_identifier.split('_')[0][1:])
         naming_d['experiment'] = f"{exp.initial_conditions_name}-x{exp_new_name}"
         ens = ensemble_GKLT(exp)
-        ens.get_sim_names(overwrite=True)
+        ens.get_sim_names(end_step=end_step, overwrite=False)
         trajectory_names = ens._sim_names
     else:
         assert False, 'need ensemble_type'
 
 
+    if end_step is None:
+        end_step = exp.n_steps
+    else:
+        naming_d['experiment'] += f"-step{end_step}"
+
     if 'before' in experiment_identifier:
         naming_d['variable'] += '-before'
 
-    print(naming_d)
-
-
     for i,sim_name in enumerate(trajectory_names):
         ens_name = f"ens{str(i+1).zfill(3)}"
-        out_dir = '/'.join([exp.dir_work] + [v for k,v in naming_d.items()] + [ens_name])
+        out_dir = '/'.join([exp.dir_export] + [v for k,v in naming_d.items()] + [ens_name])
         #first_date = f"{exp.initial_condition_fake_year}-{exp.start_date_in_year}"
         #last_date = str(datetime.strptime(first_date, "%Y-%m-%d") + timedelta(days=exp.n_days * end_step))[:10]
         out_file_name = f"{out_dir}/{naming_d['variable']}_{naming_d['time_frequency']}_CESM2_{naming_d['experiment']}_{ens_name}_{exp.initial_condition_fake_year}.nc"

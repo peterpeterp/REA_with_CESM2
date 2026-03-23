@@ -54,11 +54,13 @@ class ensemble_GKLT(ensemble):
     # build a forest                  #
     ###################################
 
-    def get_sim_names(self, overwrite=False):
-        file_name = f"{self._exp.dir_out}/sim_names.txt"
+    def get_sim_names(self, end_step=None, overwrite=False):
+        if end_step is None:
+            end_step = self._exp.n_steps
+        file_name = f"{self._exp.dir_out}/sim_names-step{end_step}.txt"
         if os.path.isfile(file_name) == False or overwrite:
             todo_tables = {}
-            steps = np.arange(0,self._exp.n_steps,1,'int')
+            steps = np.arange(0,end_step,1,'int')
             for step in steps:
                 # HACK because of renaming with the eke and future simulation hacks
                 try:
@@ -82,6 +84,12 @@ class ensemble_GKLT(ensemble):
                 fl.write(';'.join(self._sim_names))
         else:
             self._sim_names = open(file_name, 'r').read().split(';')
+
+    def build_forest(self):
+        self._forest = {}
+        for sim_name in self._sim_names:
+            self._forest[sim_name] = simulation_tree(sim_name, self._forest)
+
 
     def get_weights_uniqueness(self):
         '''
