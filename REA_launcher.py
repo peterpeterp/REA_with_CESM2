@@ -414,17 +414,17 @@ module load nano emacs ncview tree
             if len(job_ids_to_wait_for) > 0:
                 new_slurm_job += f"#SBATCH --dependency=afterok:{','.join(job_ids_to_wait_for)}\n"
 
-            new_slurm_job += sbatch_modules
+            # new_slurm_job += sbatch_modules
 
             new_slurm_job += f"{self._exp.python_environment_path} main_launcher.py --experiment {self._exp.experiment_identifier}"
             for cmd_line_argument in ['verbose','dry_run','relaunch_cases_which_are_unclear', 'relaunch_after_completion']:
                 if self.__dict__[f"_{cmd_line_argument}"]:
                     new_slurm_job += f" --{cmd_line_argument}"
 
-            with open(f"slurm_job_files/job_{self._exp.experiment_name}", 'w') as job_file:
+            with open(f"job_files/job_{self._exp.experiment_name}", 'w') as job_file:
                 job_file.write(new_slurm_job)
 
-            self.run(f"sbatch slurm_job_files/job_{self._exp.experiment_name}")
+            self.run(f"sbatch job_files/job_{self._exp.experiment_name}")
 
 
 if __name__ == "__main__":
