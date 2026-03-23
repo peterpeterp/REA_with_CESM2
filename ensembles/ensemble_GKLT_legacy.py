@@ -170,7 +170,8 @@ class ensemble_GKLT_legacy(ensemble):
         self._weight_from_algo = self._trajectories['obs'].mean('time').copy() * np.nan
         self._weight_from_algo[:] = np.array(
             [
-                np.product(self._mean_scores[:-1]) / (np.product(self._scores[i,:-1]) * self._exp.n_members)
+                #np.product(self._mean_scores[:-1]) / (np.product(self._scores[i,:-1]) * self._exp.n_members)
+                np.prod(self._mean_scores[:-1]) / (np.prod(self._scores[i,:-1]) * self._exp.n_members)
                 for i in range(self._exp.n_members)
             ]
         )
