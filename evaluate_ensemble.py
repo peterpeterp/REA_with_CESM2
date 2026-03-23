@@ -32,10 +32,10 @@ for experiment_identifier in command_line_arguments.experiment_identifiers:
         "experiment" : f"{exp.initial_conditions_name}-x{exp_new_name}",
         "realm": "meta",
     }
-    out_dir = '/'.join([exp.dir_work] + [v for k,v in naming_d.items()])
+    out_dir = '/'.join([exp.dir_export] + [v for k,v in naming_d.items()])
     os.makedirs(out_dir, exist_ok=True)
 
-    obs = xr.open_mfdataset(f"{exp.dir_work}/REA_output/{exp.product_name}/NCAR/CESM2/{exp.initial_conditions_name}-x{exp_new_name}/meta/obs/*/*", concat_dim='sim', combine='nested')['obs'].load()
+    obs = xr.open_mfdataset(f"{exp.dir_export}/REA_output/{exp.product_name}/NCAR/CESM2/{exp.initial_conditions_name}-x{exp_new_name}/meta/obs/*/*", concat_dim='sim', combine='nested')['obs'].load()
 
     ens = ensemble_GKLT(exp)
     ens.get_sim_names(overwrite=True)
