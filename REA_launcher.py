@@ -15,14 +15,14 @@ class launch_handler():
                  dry_run=True, 
                  relaunch_cases_which_are_unclear=False, 
                  relaunch_after_completion=False, 
-                 automatically_delete_restart_files=False
+                 keep_all_restart_files=False
                  ):
         self._exp = experiment
         self._verbose = verbose
         self._dry_run = dry_run
         self._relaunch_after_completion = relaunch_after_completion
         self._relaunch_cases_which_are_unclear = relaunch_cases_which_are_unclear
-        self._automatically_delete_restart_files = automatically_delete_restart_files
+        self._keep_all_restart_files = keep_all_restart_files
 
         # create dirs
         for path in [
@@ -397,7 +397,7 @@ module load nano emacs ncview tree
 
                 print(f"cleaning run directories of step{step -1}")
                 self.clean_run_directories_of_step_X(step - 1)
-                if self._automatically_delete_restart_files:
+                if self._keep_all_restart_files == False:
                     print(f"deleting restart files of step{step - 3}")
                     self.delete_restart_files_of_step_X(step - 3)
     
@@ -444,7 +444,7 @@ if __name__ == "__main__":
     parser.add_argument("--dry_run", action='store_true')
     parser.add_argument("--relaunch_cases_which_are_unclear", action='store_true')
     parser.add_argument("--relaunch_after_completion", action='store_true')
-    parser.add_argument("--automatically_delete_restart_files", action='store_true')
+    parser.add_argument("--keep_all_restart_files", action='store_true')
     command_line_arguments = parser.parse_args()
 
     # load configuration settings
