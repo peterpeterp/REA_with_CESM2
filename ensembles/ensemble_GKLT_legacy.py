@@ -72,6 +72,9 @@ class ensemble_GKLT_legacy(ensemble):
         else:
             self._sim_names = open(file_name, 'r').read().split(';')
 
+        self._sim_names = [f"{self._exp.experiment_identifier}." + s.replace(f"{self._exp.experiment_identifier}_","").replace('/','.') for s in self._sim_names]
+        
+
     def build_forest(self):
         self._forest = {}
         for sim_name in self._sim_names:

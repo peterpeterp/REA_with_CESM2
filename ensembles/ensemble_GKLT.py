@@ -42,12 +42,6 @@ class ensemble_GKLT(ensemble):
         self._name = exp.experiment_name
         super().__init__(exp)
         self.get_sim_names()
-        
-        # Ris
-        self._mean_scores = np.array([
-            pd.read_table(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}_evaluation.csv", sep=',')['score'].values.mean()
-            for step in range(self._exp.n_steps-1)
-        ])
 
     ###################################
     # Get data structure of ensemble  #
@@ -56,8 +50,14 @@ class ensemble_GKLT(ensemble):
 
     def get_sim_names(self, end_step=None, overwrite=False):
         if end_step is None:
-            end_step = self._exp.n_steps
+            for step in range(self._exp.n_steps, -1, -1):
+                # check if previous step has been started
+                previous_todo_csv = f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}_evaluation.csv"
+                if os.path.isfile(previous_todo_csv):
+                    break
+            end_step = step
         file_name = f"{self._exp.dir_out}/sim_names-step{end_step}.txt"
+
         if os.path.isfile(file_name) == False or overwrite:
             todo_tables = {}
             steps = np.arange(0,end_step,1,'int')
@@ -120,6 +120,13 @@ class ensemble_GKLT(ensemble):
     ##################
 
     def evaluate_weights_and_probabilities(self, obs):
+
+        # Ris
+        self._mean_scores = np.array([
+            pd.read_table(f"{self._exp.dir_work}/GKLT/{self._exp.experiment_name}/book_keeping/step{step}_evaluation.csv", sep=',')['score'].values.mean()
+            for step in range(self._exp.n_steps-1)
+        ])
+
         self._obs = obs
         self._abs = self._obs.mean('time')
 
