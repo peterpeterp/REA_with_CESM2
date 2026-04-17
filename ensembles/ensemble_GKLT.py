@@ -60,7 +60,7 @@ class ensemble_GKLT(ensemble):
 
         if os.path.isfile(file_name) == False or overwrite:
             todo_tables = {}
-            steps = np.arange(0,end_step,1,'int')
+            steps = np.arange(0,end_step+1,1,'int')
             for step in steps:
                 # HACK because of renaming with the eke and future simulation hacks
                 try:

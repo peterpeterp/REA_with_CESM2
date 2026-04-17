@@ -179,13 +179,13 @@ def extract(
         exp_new_name = ''.join(exp.experiment_identifier.split('_')[0][1:])
         naming_d['experiment'] = f"{exp.initial_conditions_name}-x{exp_new_name}"
         ens = ensemble_GKLT_legacy(exp)
-        ens.get_sim_names(end_step=end_step, overwrite=False)
+        ens.get_sim_names(end_step=end_step, overwrite=True)
         trajectory_names = sorted([s for s in ens._sim_names if len(s.split('/')) == end_step])
     elif exp.ensemble_type == 'rea':
         exp_new_name = ''.join(exp.experiment_identifier.split('_')[0][1:])
         naming_d['experiment'] = f"{exp.initial_conditions_name}-x{exp_new_name}"
         ens = ensemble_GKLT(exp)
-        ens.get_sim_names(end_step=end_step, overwrite=False)
+        ens.get_sim_names(end_step=end_step, overwrite=True)
         trajectory_names = ens._sim_names
     else:
         assert False, 'need ensemble_type'
