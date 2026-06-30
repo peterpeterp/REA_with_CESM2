@@ -139,9 +139,9 @@ class ensemble_GKLT(ensemble):
         if self._exp.ensemble_type == 'rea':
             self._time_aggregation_over_each_step = x.mean('time')
         elif self._exp.ensemble_type == 'rea_legacy':
-            self._time_aggregation_over_each_step = x.sum('time')
+            self._time_aggregation_over_each_step = x.mean('time')
 
-        self._scores = np.exp(self._exp.k * self._time_aggregation_over_each_step)
+        self._scores = np.exp(self._exp.k * self._exp.k_sign * self._time_aggregation_over_each_step)
 
         self._weight_from_algo = self._obs.mean('time').copy() * np.nan
         self._weight_from_algo[:] = np.array(
