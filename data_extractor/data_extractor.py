@@ -60,10 +60,10 @@ def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_ste
     return x, attrs
 
 def open_rea_legacy(exp, sim_name, realm, h_identifier, variable, preprocessor, end_step=None):
-    todos = [['/'.join(sim_name.split('/')[:step])] for step in range(1,end_step+1)]
+    #todos = [['/'.join(sim_name.split('/')[:step])] for step in range(1,end_step+1)]
     l = []
     for step in range(1,end_step+1):
-        _sim_name_of_step_ = '/'.join(sim_name.split('/')[:step])
+        _sim_name_of_step_ = '/'.join([f"{exp.experiment_identifier}_{s}" for s in sim_name.split('.')[1:step+1]])
         if preprocessor is not None:
             nc = preprocessor(f"{exp.dir_archive_post}/{_sim_name_of_step_}", realm, h_identifier, variable)
             l.append(nc[variable])            
@@ -74,7 +74,7 @@ def open_rea_legacy(exp, sim_name, realm, h_identifier, variable, preprocessor, 
                     l.append(nc[variable])
 
     if len(l) == end_step:
-        x = xr.merge(l)[variable].sortby('time')
+        x = xr.merge(l, join='outer', compat='no_conflicts')[variable].sortby('time')
 
     h_files = glob.glob(f"{exp.dir_archive_post}/{_sim_name_of_step_}/{realm}/hist/*{h_identifier}*.nc")
     with xr.open_mfdataset(h_files) as nc:
@@ -172,6 +172,12 @@ def extract(
         naming_d['time_frequency'] = ''
         naming_d['realm'] = 'meta'
 
+    if end_step is None:
+        end_step = exp.n_steps
+    else:
+        naming_d['experiment'] += f"-step{end_step}"
+
+
     if exp.ensemble_type == 'initial' or exp.ensemble_type == 'before':
         naming_d['experiment'] = f"{exp.initial_conditions_name}-initial"
         trajectory_names = [ini.split('.')[-4] + '_' + ini.split('/')[-1].split('-')[0] for ini in exp.initial_conditions]
@@ -179,8 +185,8 @@ def extract(
         exp_new_name = ''.join(exp.experiment_identifier.split('_')[0][1:])
         naming_d['experiment'] = f"{exp.initial_conditions_name}-x{exp_new_name}"
         ens = ensemble_GKLT_legacy(exp)
-        ens.get_sim_names(end_step=end_step, overwrite=True)
-        trajectory_names = sorted([s for s in ens._sim_names if len(s.split('/')) == end_step])
+        ens.get_sim_names(end_step=end_step, overwrite=False)
+        trajectory_names = sorted([s for s in ens._sim_names if len(s.split('.')) == end_step + 1])
     elif exp.ensemble_type == 'rea':
         exp_new_name = ''.join(exp.experiment_identifier.split('_')[0][1:])
         naming_d['experiment'] = f"{exp.initial_conditions_name}-x{exp_new_name}"
@@ -191,10 +197,7 @@ def extract(
         assert False, 'need ensemble_type'
 
 
-    if end_step is None:
-        end_step = exp.n_steps
-    else:
-        naming_d['experiment'] += f"-step{end_step}"
+
 
     if 'before' in experiment_identifier:
         naming_d['variable'] += '-before'

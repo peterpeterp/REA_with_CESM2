@@ -5,6 +5,7 @@ import numpy as np
 sys.path.append('../')
 
 from ensembles.ensemble_GKLT import ensemble_GKLT,get_weight_for_selection
+from ensembles.ensemble_GKLT_legacy import ensemble_GKLT_legacy
 
 import argparse
 parser = argparse.ArgumentParser()
@@ -37,8 +38,12 @@ for experiment_identifier in command_line_arguments.experiment_identifiers:
 
     obs = xr.open_mfdataset(f"{exp.dir_export}/REA_output/{exp.product_name}/NCAR/CESM2/{exp.initial_conditions_name}-x{exp_new_name}/meta/obs/*/*", concat_dim='sim', combine='nested')['obs'].load()
 
-    ens = ensemble_GKLT(exp)
-    ens.get_sim_names(overwrite=True)
+    if exp.ensemble_type == 'rea_legacy':
+        ens = ensemble_GKLT_legacy(exp)
+    elif exp.ensemble_type == 'rea':
+        ens = ensemble_GKLT(exp)
+
+    ens.get_sim_names(overwrite=False)
     ens.evaluate_weights_and_probabilities(obs)
 
     xr.Dataset({'probability':ens._prob}).to_netcdf(f"{out_dir}/probability_season_{naming_d['experiment']}.nc")

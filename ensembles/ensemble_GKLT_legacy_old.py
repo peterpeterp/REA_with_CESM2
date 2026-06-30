@@ -7,7 +7,35 @@ import matplotlib.pyplot as plt
 
 from anytree import NodeMixin, Node, RenderTree, AsciiStyle, findall
 
+def get_weight_for_selection(sim_names, exp):
+    weight = xr.DataArray(dims=['sim','step'], coords=dict(sim=sim_names,step=np.arange(0,exp.n_steps,1,'int')))
+    weight_daily = xr.DataArray(
+        dims=['sim','step','time'], 
+        coords=dict(sim=sim_names,step=np.arange(0,exp.n_steps,1,'int'),time=np.arange(0,exp.n_days,1,'int'))
+    )
+    sim_names = np.array([s.split('/') for s in sim_names])
 
+    for step in weight.step.values:
+        for v in np.unique(sim_names[:,step]):
+            same = (sim_names[:,step] == v)
+            weight[same, step] = 1 / same.sum()
+            weight_daily[same, step] = 1 / same.sum()
+
+    return weight.mean('step')
+
+
+class simulationBase(object):
+    dummy = None
+
+class simulation_tree(simulationBase, NodeMixin):  # Add Node feature
+    def __init__(self, full_name, forest):
+        self.full_name = full_name
+        self.name = full_name.split('/')[-1]
+        self._data = {}
+        if len(full_name.split('/')) > 1:
+            self.parent = forest['/'.join(full_name.split('/')[:-1])]
+        else:
+            self.parent = None
 
 class ensemble_GKLT_legacy(ensemble):
     def __init__(self, exp):

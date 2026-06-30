@@ -188,3 +188,35 @@ class ensemble_GKLT(ensemble):
                 color='gray'
 
             ax.plot(x, color=color, linestyle=linestyle, linewidth=0.5) 
+
+
+class ensemble_GKLT_legacy(ensemble_GKLT):
+    def __init__(self, exp):
+        self._name = exp.experiment_name
+        super().__init__(exp)
+        self.get_sim_names()
+
+    ###################################
+    # Get data structure of ensemble  #
+    # build a forest                  #
+    ###################################
+
+    def get_sim_names(self, end_step=None, overwrite=False):
+        if end_step is None:
+            end_step = self._exp.n_steps
+        file_name = f"{self._exp.dir_out}/sim_names-step{end_step}.txt"
+
+        if os.path.isfile(file_name) == False or overwrite:
+            self._sim_names = []
+            for step in range(end_step):
+                sim_paths = sorted([p for p in glob.glob(f"{self._exp.dir_archive_post}/*/{'/*'*step}/atm")])
+                self._sim_names += [p.replace(f"{self._exp.dir_archive_post}/","").replace('/atm','') for p in sim_paths]
+
+            self._sim_names = np.array(self._sim_names)
+            with open(file_name, 'w') as fl:
+                fl.write(';'.join(self._sim_names))
+        else:
+            self._sim_names = open(file_name, 'r').read().split(';')
+
+        self._sim_names = [f"{self._exp.experiment_identifier}." + s.replace(f"{self._exp.experiment_identifier}_","").replace('/','.') for s in self._sim_names]
+        
