@@ -153,7 +153,10 @@ class ensemble_GKLT(ensemble):
         )
 
         self._prob = self._obs.mean('time').copy() * np.nan
-        self._prob[:] = np.array([np.sum((self._abs >= a).astype(float) * self._weight_from_algo) for a in self._abs]) 
+        if self._exp.k_sign > 0:
+            self._prob[:] = np.array([np.sum((self._abs >= a).astype(float) * self._weight_from_algo) for a in self._abs])
+        if self._exp.k_sign < 0:
+            self._prob[:] = np.array([np.sum((self._abs <= a).astype(float) * self._weight_from_algo) for a in self._abs]) 
 
     def ra(self, x, thresh):
         return -1 / np.log(1 - np.sum(self._weight_from_algo[x >= thresh].values))
