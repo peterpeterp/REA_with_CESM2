@@ -4,8 +4,7 @@ import xarray as xr
 import numpy as np
 sys.path.append('../')
 
-from ensembles.ensemble_GKLT import ensemble_GKLT
-from ensembles.ensemble_GKLT_legacy import ensemble_GKLT_legacy
+from ensembles.ensemble_GKLT import ensemble_GKLT,ensemble_GKLT_legacy
 
 realm_dict = {
     'atm' : 'atmos',
@@ -43,7 +42,7 @@ def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_ste
     l = []
     for step,sim_identifier_in_step in enumerate(sim_name.split('.')[1:]):
         if preprocessor is not None:
-            nc = preprocessor(f"{exp.dir_archive_post}/step{step}/{exp.experiment_identifier}_{sim_identifier_in_step}", realm, h_identifier, variable)
+            nc = preprocessor(f"{exp.dir_archive_post}/step{step}/{exp.experiment_identifier}_{sim_identifier_in_step}", realm=realm, h_identifier=h_identifier, variable=variable)
             l.append(nc[variable])
         if preprocessor is None:
             h_files = glob.glob(f"{exp.dir_archive_post}/step{step}/{exp.experiment_identifier}_{sim_identifier_in_step}/{realm}/hist/*{h_identifier}*.nc")
@@ -60,12 +59,11 @@ def open_rea(exp, sim_name, realm, h_identifier, variable, preprocessor, end_ste
     return x, attrs
 
 def open_rea_legacy(exp, sim_name, realm, h_identifier, variable, preprocessor, end_step=None):
-    #todos = [['/'.join(sim_name.split('/')[:step])] for step in range(1,end_step+1)]
     l = []
     for step in range(1,end_step+1):
         _sim_name_of_step_ = '/'.join([f"{exp.experiment_identifier}_{s}" for s in sim_name.split('.')[1:step+1]])
         if preprocessor is not None:
-            nc = preprocessor(f"{exp.dir_archive_post}/{_sim_name_of_step_}", realm, h_identifier, variable)
+            nc = preprocessor(f"{exp.dir_archive_post}/{_sim_name_of_step_}", realm=realm, h_identifier=h_identifier, variable=variable)
             l.append(nc[variable])            
         if preprocessor is None:
             h_files = glob.glob(f"{exp.dir_archive_post}/{_sim_name_of_step_}/{realm}/hist/*{h_identifier}*.nc")
@@ -86,9 +84,8 @@ def open_initial(exp, sim_name, realm, h_identifier, variable, preprocessor):
     archive_fldr = f"{exp.dir_archive}/GKLT/initial_{exp.initial_conditions_name}_{exp.start_date_in_year}/{sim_name}"
 
     if preprocessor is not None:
-        nc = preprocessor(f"{exp.dir_archive_post}/step{step}/{exp.experiment_identifier}_{sim_identifier_in_step}", realm, h_identifier, variable)
-        with xr.open_mfdataset(h_files) as nc:
-            x = nc[variable]
+        nc = preprocessor(f"{archive_fldr}", realm=realm, h_identifier=h_identifier, variable=variable)
+        x = nc[variable]
 
     if preprocessor is None:
         h_files = glob.glob(f"{archive_fldr}/{realm}/hist/*{h_identifier}*.nc")
@@ -96,7 +93,7 @@ def open_initial(exp, sim_name, realm, h_identifier, variable, preprocessor):
             x = nc[variable]
 
     h_files = glob.glob(f"{archive_fldr}/{realm}/hist/*{h_identifier}*.nc")
-    with xr.open_mfdataset(h_files) as nc:
+    with xr.open_mfdataset(h_files, combine='nested', concat_dim='time', data_vars='all') as nc:
         attrs = nc.attrs  
 
     return x, attrs
@@ -111,10 +108,9 @@ def open_initial_before(exp, sim_name, realm, h_identifier, variable, preprocess
         initial_before_archive = '/'.join(initial_archive.split('/')[:-1]) + f"/{initial_year}-01-01_to_{initial_year}-{exp.start_date_in_year}"
 
     if preprocessor is not None:
-        nc = preprocessor(f"{initial_before_archive}", realm, h_identifier, variable)
-        with xr.open_mfdataset(h_files) as nc:
-            i_first_day = nc.time.loc[:f"{str(nc.time.dt.year.values[0]).zfill(4)}-{exp.start_date_in_year}"].shape[0]+1
-            x = nc[variable][:i_first_day]
+        nc = preprocessor(f"{initial_before_archive}", realm=realm, h_identifier=h_identifier, variable=variable).sortby('time')
+        i_first_day = nc.time.loc[:f"{str(nc.time.dt.year.values[0]).zfill(4)}-{exp.start_date_in_year}"].shape[0]+1
+        x = nc[variable][:i_first_day]
 
     if preprocessor is None:
         h_files = glob.glob(f"{initial_before_archive}/{realm}/hist/*{h_identifier}.{initial_year}*")
@@ -198,7 +194,6 @@ def extract(
 
 
 
-
     if 'before' in experiment_identifier:
         naming_d['variable'] += '-before'
 
@@ -217,7 +212,7 @@ def extract(
             elif exp.ensemble_type == 'initial':
                 x, attrs = open_initial(exp, sim_name, realm, h_identifier, variable, preprocessor)
                 x = x.assign_coords(sim=sim_name)
-                x = x.assign_coords(time=xr.date_range(f"{exp.initial_condition_fake_year}-{exp.start_date_in_year}", periods=exp.n_days*end_step + 1)[1:])
+                x = x.assign_coords(time=xr.date_range(f"{exp.initial_condition_fake_year}-{exp.start_date_in_year}", periods=exp.n_days*end_step+1)[1:])
             elif exp.ensemble_type == 'rea_legacy':
                 x, attrs = open_rea_legacy(exp, sim_name, realm, h_identifier, variable, preprocessor, end_step)
                 x = x.assign_coords(sim=sim_name)

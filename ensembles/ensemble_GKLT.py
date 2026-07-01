@@ -60,7 +60,7 @@ class ensemble_GKLT(ensemble):
 
         if os.path.isfile(file_name) == False or overwrite:
             todo_tables = {}
-            steps = np.arange(0,end_step+1,1,'int')
+            steps = np.arange(0,end_step,1,'int')
             for step in steps:
                 # HACK because of renaming with the eke and future simulation hacks
                 try:
@@ -211,7 +211,7 @@ class ensemble_GKLT_legacy(ensemble_GKLT):
 
         if os.path.isfile(file_name) == False or overwrite:
             self._sim_names = []
-            for step in range(end_step):
+            for step in range(end_step+1):
                 sim_paths = sorted([p for p in glob.glob(f"{self._exp.dir_archive_post}/*/{'/*'*step}/atm")])
                 self._sim_names += [p.replace(f"{self._exp.dir_archive_post}/","").replace('/atm','') for p in sim_paths]
 
