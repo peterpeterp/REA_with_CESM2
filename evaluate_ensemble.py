@@ -4,8 +4,7 @@ import xarray as xr
 import numpy as np
 sys.path.append('../')
 
-from ensembles.ensemble_GKLT import ensemble_GKLT,get_weight_for_selection
-from ensembles.ensemble_GKLT_legacy import ensemble_GKLT_legacy
+from ensembles.ensemble_GKLT import ensemble_GKLT,get_weight_for_selection,ensemble_GKLT_legacy
 
 import argparse
 parser = argparse.ArgumentParser()
